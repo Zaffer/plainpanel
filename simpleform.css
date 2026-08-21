@@ -1,0 +1,60 @@
+/* Optional theme: the polytopy look. Dark, monospace, translucent panels.
+   Skip this file entirely for bare native controls — everything still works. */
+
+.sf-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  color: #eee;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 8px 10px;
+  min-width: 220px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.sf-panel summary,
+.sf-folder summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sf-folder {
+  border: 1px solid #444;
+  padding: 4px 6px;
+  margin: 6px 0;
+}
+
+.sf-row {
+  margin: 6px 0;
+}
+
+.sf-row input[type='range'] {
+  width: 100%;
+}
+
+.sf-panel button,
+.sf-folder button {
+  font-family: monospace;
+  background: #222;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 3px 8px;
+  margin: 4px 4px 0 0;
+  cursor: pointer;
+}
+
+.sf-panel button:disabled,
+.sf-folder button:disabled {
+  color: #666;
+  border-color: #333;
+  cursor: default;
+}
+
+.sf-panel output,
+.sf-folder output {
+  color: #8fc7ff;
+}

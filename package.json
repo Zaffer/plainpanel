@@ -1,0 +1,31 @@
+{
+  "name": "simpleform",
+  "version": "0.1.0",
+  "description": "Signals-first micro-library for research dashboard controls. Real HTML, one store, no build step for consumers.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/simpleform.d.ts",
+      "import": "./dist/simpleform.js"
+    },
+    "./simpleform.css": "./simpleform.css"
+  },
+  "types": "./dist/simpleform.d.ts",
+  "files": [
+    "dist",
+    "simpleform.css"
+  ],
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/simpleform.js && tsc -p tsconfig.json",
+    "test": "npm run build && node --test",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "serve": "python3 -m http.server 8137"
+  },
+  "repository": "github:Zaffer/simpleform",
+  "license": "MIT",
+  "devDependencies": {
+    "alien-signals": "3.2.1",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}
