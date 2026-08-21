@@ -20,9 +20,13 @@
  *   data-on="click:path"    listener → function in scope (space-separate multiple pairs)
  *   data-wheel              wheel nudges a data-bind'ed range/number input by its step
  *   data-each="path"        on <template>: one row per array item; rows see
- *                           $item / $index plus the outer scope. Rows are
- *                           reconciled: content changes update in place (zero
- *                           DOM mutation), only length changes add/remove rows.
+ *                           $item / $index plus the outer scope. Requires
+ *                           data-key. Rows are reconciled by key: content
+ *                           changes update in place (zero DOM mutation),
+ *                           moved items move their DOM nodes with them.
+ *   data-key="id"           with data-each: item identity — a field path into
+ *                           the item, "$item" for primitive values, or
+ *                           "$index" for explicitly positional rows.
  */
 import { type Stop } from './signals';
 export type Scope = object;

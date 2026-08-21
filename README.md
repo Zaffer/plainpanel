@@ -99,7 +99,8 @@ Scans `root` for `data-*` attributes, wires them against `scope`, returns a
 | `data-disabled="path"` | button/input/… | `disabled` ← value — state disables controls, it never hides or moves them |
 | `data-on="click:path"` | any element | listener → function in scope (space-separate multiple `event:path` pairs) |
 | `data-wheel` | range/number with `data-bind` | mouse wheel nudges by `step` |
-| `data-each="path"` | `<template>` | one row per array item; rows see `$item` / `$index` plus outer scope. Reconciled by position: content changes update rows **in place** (zero DOM mutation), only length changes add/remove tail rows |
+| `data-each="path"` | `<template>` | one row per array item; rows see `$item` / `$index` plus outer scope. **Requires `data-key`.** Reconciled by key: content changes update rows **in place** (zero DOM mutation); a kept item at a new position moves its DOM nodes with it, so focus and canvas state travel with the item |
+| `data-key="id"` | `<template>` with `data-each` | item identity: a field path into the item (`"id"`), `"$item"` for primitive values, or `"$index"` for explicitly positional rows. Duplicate or object keys throw |
 
 Paths are dot-walked (`params.learningRate`), prototype chain included. A miss
 throws with the full path. No expressions, ever.

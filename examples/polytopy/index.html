@@ -32,7 +32,7 @@
            native slider drag when its fieldset's child list changes. -->
       <fieldset>
         <legend>layers</legend>
-        <template data-each="views.layers">
+        <template data-each="views.layers" data-key="index">
           <div>layer <span data-text="$item.index"></span>: <span data-text="$item.size"></span> neurons</div>
         </template>
       </fieldset>

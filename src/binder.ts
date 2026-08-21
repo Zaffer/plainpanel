@@ -20,9 +20,13 @@
  *   data-on="click:path"    listener → function in scope (space-separate multiple pairs)
  *   data-wheel              wheel nudges a data-bind'ed range/number input by its step
  *   data-each="path"        on <template>: one row per array item; rows see
- *                           $item / $index plus the outer scope. Rows are
- *                           reconciled: content changes update in place (zero
- *                           DOM mutation), only length changes add/remove rows.
+ *                           $item / $index plus the outer scope. Requires
+ *                           data-key. Rows are reconciled by key: content
+ *                           changes update in place (zero DOM mutation),
+ *                           moved items move their DOM nodes with them.
+ *   data-key="id"           with data-each: item identity — a field path into
+ *                           the item, "$item" for primitive values, or
+ *                           "$index" for explicitly positional rows.
  */
 import { effect, isComputed, isSignal, signal, untracked, type Signal, type Stop } from './signals';
 import { bindDisabled, bindShow, bindText, bindValue, bindWheel, listen } from './bindings';
@@ -143,21 +147,43 @@ export function bind(root: Element | Document | DocumentFragment, scope: Scope):
 }
 
 /**
- * <template data-each="path">, reconciled by position:
- *   - same length: each row's $item signal is written in place — zero DOM
- *     structural mutation (unchanged items are === no-ops);
- *   - longer: new rows are appended at the tail;
- *   - shorter: tail rows are torn down and removed.
- * Structural DOM mutation therefore happens only when the array length
- * changes. This matters beyond economy: Chrome silently cancels an
+ * <template data-each="path" data-key="...">, reconciled by key:
+ *   - an item whose key persists keeps its row: its $item/$index signals are
+ *     written in place (unchanged values are === no-ops, zero DOM mutation);
+ *   - a kept item at a new position MOVES its DOM nodes with it, so focus,
+ *     selection, and canvas state travel with the item, not the slot;
+ *   - vanished keys tear their rows down; new keys clone fresh rows.
+ * Structural DOM mutation therefore happens only when membership or order
+ * actually changes. This matters beyond economy: Chrome silently cancels an
  * in-progress native slider drag when the child list of its containing
  * <fieldset> changes, so keep data-each templates in their own container,
  * not beside the controls that drive them.
  */
 function bindEach(tpl: HTMLTemplateElement, scope: Scope): Stop {
   const path = (tpl.dataset.each ?? '').trim();
-  type Row = { item: Signal<unknown>; stop: Stop; nodes: ChildNode[] };
-  const rows: Row[] = [];
+  const keyPath = (tpl.dataset.key ?? '').trim();
+  if (!keyPath) {
+    throw new Error(
+      `simpleform: data-each="${path}" requires data-key — a unique item field like data-key="id", ` +
+        `data-key="$item" for primitive items, or data-key="$index" for explicitly positional rows`,
+    );
+  }
+
+  const keyOf = (item: unknown, index: number): unknown => {
+    if (keyPath === '$index') return index;
+    let key = keyPath === '$item' ? item : walk(item as Scope, keyPath);
+    if (isReadable(key)) key = key();
+    if (typeof key === 'object' && key !== null) {
+      throw new Error(
+        `simpleform: data-key="${keyPath}" produced an object — keys must be primitive ` +
+          `(fresh objects would defeat tracking); key by a field instead`,
+      );
+    }
+    return key;
+  };
+
+  type Row = { item: Signal<unknown>; index: Signal<number>; stop: Stop; nodes: ChildNode[] };
+  let rows = new Map<unknown, Row>();
 
   const removeRow = (row: Row) => {
     row.stop();
@@ -170,28 +196,49 @@ function bindEach(tpl: HTMLTemplateElement, scope: Scope): Stop {
       throw new Error(`simpleform: data-each="${path}" must read an array, got ${typeof items}`);
     }
     // Row effects must be top-level (not children of this effect, which would
-    // purge kept rows' bindings on every re-run), and item writes must not
-    // subscribe this effect to anything a row reads.
+    // purge kept rows' bindings on every re-run), and item/index writes must
+    // not subscribe this effect to anything a row reads.
     untracked(() => {
-      for (let i = 0; i < Math.min(rows.length, items.length); i++) {
-        rows[i].item(items[i]);
-      }
-      for (let i = rows.length; i < items.length; i++) {
-        const item = signal<unknown>(items[i]);
-        const clone = tpl.content.cloneNode(true) as DocumentFragment;
-        const rowScope = Object.assign(Object.create(scope), { $item: item, $index: i });
-        const stop = bind(clone, rowScope);
-        const nodes = [...clone.childNodes];
-        const anchor = rows.length ? rows[rows.length - 1].nodes[rows[rows.length - 1].nodes.length - 1] : tpl;
-        anchor.after(clone);
-        rows.push({ item, stop, nodes });
-      }
-      while (rows.length > items.length) removeRow(rows.pop()!);
+      const next = new Map<unknown, Row>();
+      let anchor: ChildNode | HTMLTemplateElement = tpl;
+      items.forEach((itemValue, i) => {
+        const key = keyOf(itemValue, i);
+        if (next.has(key)) {
+          throw new Error(`simpleform: duplicate data-key value "${String(key)}" in data-each="${path}"`);
+        }
+        let row = rows.get(key);
+        if (row) {
+          rows.delete(key);
+          row.item(itemValue);
+          row.index(i);
+          if (anchor.nextSibling !== row.nodes[0]) {
+            let ref: ChildNode | HTMLTemplateElement = anchor;
+            for (const node of row.nodes) {
+              ref.after(node);
+              ref = node;
+            }
+          }
+        } else {
+          const item = signal<unknown>(itemValue);
+          const index = signal(i);
+          const clone = tpl.content.cloneNode(true) as DocumentFragment;
+          const rowScope = Object.assign(Object.create(scope), { $item: item, $index: index });
+          const stop = bind(clone, rowScope);
+          const nodes = [...clone.childNodes];
+          anchor.after(clone);
+          row = { item, index, stop, nodes };
+        }
+        next.set(key, row);
+        anchor = row.nodes[row.nodes.length - 1] ?? anchor;
+      });
+      for (const stale of rows.values()) removeRow(stale);
+      rows = next;
     });
   });
 
   return () => {
     stopEffect();
-    for (const row of rows.splice(0)) removeRow(row);
+    for (const row of rows.values()) removeRow(row);
+    rows.clear();
   };
 }

@@ -33,9 +33,14 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 - Synthetic events (dispatchEvent) do NOT exercise native drag gestures.
   Verify sliders with real input (CDP Input domain / chrome-devtools drag),
   not just synthetic input events.
-- Inside a data-each rebuild effect, row creation and $item writes are wrapped
-  in untracked(): row effects must be top-level (nested ones would be purged
-  on every re-run) and item writes must not subscribe the rebuild effect.
+- Inside a data-each reconcile effect, row creation and $item/$index writes
+  are wrapped in untracked(): row effects must be top-level (nested ones would
+  be purged on every re-run) and item writes must not subscribe the effect.
+- data-key is compulsory on data-each (Angular @for made track mandatory for
+  the same reason): a forgotten key is a silent wrong-row-state bug, a missing
+  attribute is a loud bind-time error. "$index" is the explicit positional
+  escape hatch; object-valued keys throw because fresh-object identity would
+  silently degrade to rebuild-everything.
 
 ## Commands
 

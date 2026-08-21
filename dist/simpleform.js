@@ -713,7 +713,24 @@ function bind(root, scope) {
 }
 function bindEach(tpl, scope) {
   const path = (tpl.dataset.each ?? "").trim();
-  const rows = [];
+  const keyPath = (tpl.dataset.key ?? "").trim();
+  if (!keyPath) {
+    throw new Error(
+      `simpleform: data-each="${path}" requires data-key \u2014 a unique item field like data-key="id", data-key="$item" for primitive items, or data-key="$index" for explicitly positional rows`
+    );
+  }
+  const keyOf = (item, index) => {
+    if (keyPath === "$index") return index;
+    let key = keyPath === "$item" ? item : walk(item, keyPath);
+    if (isReadable(key)) key = key();
+    if (typeof key === "object" && key !== null) {
+      throw new Error(
+        `simpleform: data-key="${keyPath}" produced an object \u2014 keys must be primitive (fresh objects would defeat tracking); key by a field instead`
+      );
+    }
+    return key;
+  };
+  let rows = /* @__PURE__ */ new Map();
   const removeRow = (row) => {
     row.stop();
     for (const node of row.nodes) node.remove();
@@ -724,25 +741,46 @@ function bindEach(tpl, scope) {
       throw new Error(`simpleform: data-each="${path}" must read an array, got ${typeof items}`);
     }
     untracked(() => {
-      for (let i = 0; i < Math.min(rows.length, items.length); i++) {
-        rows[i].item(items[i]);
-      }
-      for (let i = rows.length; i < items.length; i++) {
-        const item = signal2(items[i]);
-        const clone = tpl.content.cloneNode(true);
-        const rowScope = Object.assign(Object.create(scope), { $item: item, $index: i });
-        const stop = bind(clone, rowScope);
-        const nodes = [...clone.childNodes];
-        const anchor = rows.length ? rows[rows.length - 1].nodes[rows[rows.length - 1].nodes.length - 1] : tpl;
-        anchor.after(clone);
-        rows.push({ item, stop, nodes });
-      }
-      while (rows.length > items.length) removeRow(rows.pop());
+      const next = /* @__PURE__ */ new Map();
+      let anchor = tpl;
+      items.forEach((itemValue, i) => {
+        const key = keyOf(itemValue, i);
+        if (next.has(key)) {
+          throw new Error(`simpleform: duplicate data-key value "${String(key)}" in data-each="${path}"`);
+        }
+        let row = rows.get(key);
+        if (row) {
+          rows.delete(key);
+          row.item(itemValue);
+          row.index(i);
+          if (anchor.nextSibling !== row.nodes[0]) {
+            let ref = anchor;
+            for (const node of row.nodes) {
+              ref.after(node);
+              ref = node;
+            }
+          }
+        } else {
+          const item = signal2(itemValue);
+          const index = signal2(i);
+          const clone = tpl.content.cloneNode(true);
+          const rowScope = Object.assign(Object.create(scope), { $item: item, $index: index });
+          const stop = bind(clone, rowScope);
+          const nodes = [...clone.childNodes];
+          anchor.after(clone);
+          row = { item, index, stop, nodes };
+        }
+        next.set(key, row);
+        anchor = row.nodes[row.nodes.length - 1] ?? anchor;
+      });
+      for (const stale of rows.values()) removeRow(stale);
+      rows = next;
     });
   });
   return () => {
     stopEffect();
-    for (const row of rows.splice(0)) removeRow(row);
+    for (const row of rows.values()) removeRow(row);
+    rows.clear();
   };
 }
 
