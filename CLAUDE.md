@@ -20,6 +20,10 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 - Minimal CSS; prefer native elements/attributes (`details`, `fieldset`,
   `output`, `hidden`, `disabled`) over styled divs.
 - Errors are loud and prefixed `simpleform:` — never fail silently.
+- The library never imposes app-level UX policy (selectability, focus,
+  scrolling). Native defaults stay; anything beyond the control element
+  itself is the app's decision. (James's rule — do not widen user-select
+  back to panels.)
 - Keep the library small. A feature that can live in an example instead of
   src/ lives in an example.
 

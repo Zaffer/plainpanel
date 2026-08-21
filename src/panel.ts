@@ -46,10 +46,6 @@ export class Panel {
   constructor(title: string, open: boolean) {
     this.el = document.createElement('details');
     this.el.className = 'sf-panel';
-    // Behavior, not theming (works without the CSS file): selectable label
-    // text turns a missed slider grab into a text-selection drag that shows
-    // the no-drop cursor and eats the gesture.
-    this.el.style.userSelect = 'none';
     this.el.open = open;
     const summary = document.createElement('summary');
     summary.textContent = title;
@@ -63,6 +59,7 @@ export class Panel {
     const output = document.createElement('output');
     const input = document.createElement('input');
     input.type = 'range';
+    input.style.userSelect = 'none'; // the control only — label selectability is the app's call
     input.min = String(opts.min);
     input.max = String(opts.max);
     input.step = String(opts.step);

@@ -2,9 +2,6 @@
    Skip this file entirely for bare native controls — everything still works. */
 
 .sf-panel {
-  /* Panels are controls, not prose: selectable text turns a missed slider
-     grab into a text-selection drag (the 🚫 no-drop cursor). */
-  user-select: none;
   position: absolute;
   top: 10px;
   left: 10px;
@@ -37,6 +34,13 @@
 
 .sf-row input[type='range'] {
   width: 100%;
+}
+
+/* Only the control itself opts out of selection; whether surrounding label
+   text is selectable is the app's decision, not the library's. */
+.sf-panel input[type='range'],
+.sf-folder input[type='range'] {
+  user-select: none;
 }
 
 .sf-panel button,

@@ -798,7 +798,6 @@ var Panel = class _Panel {
   constructor(title, open) {
     this.el = document.createElement("details");
     this.el.className = "sf-panel";
-    this.el.style.userSelect = "none";
     this.el.open = open;
     const summary = document.createElement("summary");
     summary.textContent = title;
@@ -811,6 +810,7 @@ var Panel = class _Panel {
     const output = document.createElement("output");
     const input = document.createElement("input");
     input.type = "range";
+    input.style.userSelect = "none";
     input.min = String(opts.min);
     input.max = String(opts.max);
     input.step = String(opts.step);
