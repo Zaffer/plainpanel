@@ -798,6 +798,7 @@ var Panel = class _Panel {
   constructor(title, open) {
     this.el = document.createElement("details");
     this.el.className = "sf-panel";
+    this.el.style.userSelect = "none";
     this.el.open = open;
     const summary = document.createElement("summary");
     summary.textContent = title;
