@@ -607,9 +607,13 @@ function bindValue(el, sig) {
     sig(el.value);
   };
   el.addEventListener("input", onInput);
+  const onDragStart = (e) => e.preventDefault();
+  const isRange = el.type === "range";
+  if (isRange) el.addEventListener("dragstart", onDragStart);
   return () => {
     stop();
     el.removeEventListener("input", onInput);
+    if (isRange) el.removeEventListener("dragstart", onDragStart);
   };
 }
 function bindWheel(el, sig) {
