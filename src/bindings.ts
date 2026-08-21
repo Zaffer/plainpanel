@@ -36,26 +36,77 @@ export function bindDisabled(el: Element & { disabled: boolean }, source: Readab
  * from a half-typed number input is never written into the store.
  * Programmatic writes don't fire 'input', and the signal's === short-circuit
  * kills the echo from our own writeback, so this cannot loop.
+ *
+ * Element-specific behavior:
+ *   checkbox            checked ⇄ boolean signal
+ *   radio               checked ⇄ (signal === this radio's value); one signal per group
+ *   select[multiple]    selected options ⇄ string[] signal
+ *   input[type=file]    one-way DOM → signal (browsers forbid setting a file
+ *                       input's value); the signal receives File[]
+ *   <details>           open ⇄ boolean signal (via the toggle event)
+ *   everything else     value string ⇄ signal, coerced to the signal's type
  */
-export function bindValue(el: ValueElement, sig: Signal<any>): Stop {
-  const isCheckbox = (el as HTMLInputElement).type === 'checkbox';
+export function bindValue(el: ValueElement | HTMLDetailsElement, sig: Signal<any>): Stop {
+  if (el instanceof HTMLDetailsElement) {
+    const stop = effect(() => {
+      el.open = !!sig();
+    });
+    const onToggle = () => sig(el.open);
+    el.addEventListener('toggle', onToggle);
+    return () => {
+      stop();
+      el.removeEventListener('toggle', onToggle);
+    };
+  }
+
+  const type = (el as HTMLInputElement).type;
+
+  if (type === 'file') {
+    const onInput = () => sig([...((el as HTMLInputElement).files ?? [])]);
+    el.addEventListener('input', onInput);
+    return () => el.removeEventListener('input', onInput);
+  }
+
   const kind = untracked(() => typeof sig());
+  const coerce = (raw: string) => (kind === 'number' ? Number(raw) : raw);
+  let stop: Stop;
+  let onInput: () => void;
 
-  const stop = effect(() => {
-    const v = sig();
-    if (isCheckbox) (el as HTMLInputElement).checked = !!v;
-    else el.value = String(v);
-  });
+  if (type === 'checkbox') {
+    stop = effect(() => {
+      (el as HTMLInputElement).checked = !!sig();
+    });
+    onInput = () => sig((el as HTMLInputElement).checked);
+  } else if (type === 'radio') {
+    stop = effect(() => {
+      (el as HTMLInputElement).checked = sig() === coerce(el.value);
+    });
+    onInput = () => {
+      if ((el as HTMLInputElement).checked) sig(coerce(el.value));
+    };
+  } else if (el instanceof HTMLSelectElement && el.multiple) {
+    stop = effect(() => {
+      const selected = sig();
+      if (!Array.isArray(selected)) {
+        throw new Error('simpleform: a select[multiple] binding needs a signal holding an array');
+      }
+      for (const option of el.options) option.selected = selected.includes(option.value);
+    });
+    onInput = () => sig([...el.selectedOptions].map((o) => o.value));
+  } else {
+    stop = effect(() => {
+      el.value = String(sig());
+    });
+    onInput = () => {
+      if (kind === 'number') {
+        const n = Number(el.value);
+        if (!Number.isNaN(n)) sig(n);
+        return;
+      }
+      sig(el.value);
+    };
+  }
 
-  const onInput = () => {
-    if (isCheckbox) return sig((el as HTMLInputElement).checked);
-    if (kind === 'number') {
-      const n = Number(el.value);
-      if (!Number.isNaN(n)) sig(n);
-      return;
-    }
-    sig(el.value);
-  };
   el.addEventListener('input', onInput);
 
   // A press on a slider is always a thumb drag. When a text selection spans
@@ -63,7 +114,7 @@ export function bindValue(el: ValueElement, sig: Signal<any>): Stop {
   // mid-gesture (the no-drop cursor; the thumb freezes). Cancelling dragstart
   // keeps the gesture; what is selectable stays the app's decision.
   const onDragStart = (e: Event) => e.preventDefault();
-  const isRange = (el as HTMLInputElement).type === 'range';
+  const isRange = type === 'range';
   if (isRange) el.addEventListener('dragstart', onDragStart);
 
   return () => {
@@ -71,6 +122,20 @@ export function bindValue(el: ValueElement, sig: Signal<any>): Stop {
     el.removeEventListener('input', onInput);
     if (isRange) el.removeEventListener('dragstart', onDragStart);
   };
+}
+
+/** One-way value display for <progress>/<meter> — no input events exist here. */
+export function bindGauge(el: HTMLProgressElement | HTMLMeterElement, source: Readable<unknown>): Stop {
+  return effect(() => {
+    el.value = Number(source()) || 0;
+  });
+}
+
+/** Whole-subtree disable via the native inert attribute: focus, clicks, and a11y. */
+export function bindInert(el: HTMLElement, source: Readable<unknown>): Stop {
+  return effect(() => {
+    el.inert = !!source();
+  });
 }
 
 /** Mouse wheel nudges a range/number input by its step and writes the signal. */

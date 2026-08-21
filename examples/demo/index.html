@@ -5,10 +5,55 @@
   <title>simpleform demo</title>
   <link rel="stylesheet" href="../../simpleform.css">
   <style>
-    body { margin: 0; overflow: hidden; font-family: monospace; background: #111; color: #eee; }
+    /* Layout is app policy, so it all lives here, not in the library. */
+    body { margin: 0; overflow: hidden; font-family: monospace; font-size: 12px; background: #111; color: #eee; }
     #scene { position: fixed; inset: 0; display: block; }
-    fieldset { border: 1px solid #444; margin: 6px 0; }
-    #metricChart { display: block; margin-top: 6px; background: #000; }
+
+    #top {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      padding: 6px 10px; background: rgba(0, 0, 0, 0.85);
+    }
+    #left, #right {
+      position: fixed; top: 46px; bottom: 205px; z-index: 1000;
+      width: 320px; overflow-y: auto;
+      background: rgba(0, 0, 0, 0.85); padding: 8px;
+    }
+    #left { left: 0; }
+    #right { right: 0; width: 280px; }
+    #bottom {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
+      height: 195px; overflow: auto;
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 8px 10px; background: rgba(0, 0, 0, 0.85);
+    }
+    #bottom > fieldset { flex: 0 0 auto; max-height: 175px; overflow-y: auto; }
+
+    /* The builder panel docks inside #right instead of floating. */
+    #right .sf-panel { position: static; min-width: 0; max-height: none; padding: 0; background: none; }
+
+    fieldset { border: 1px solid #444; margin: 6px 0; min-width: 0; }
+    details.group { border: 1px solid #333; padding: 2px 6px; margin: 4px 0; }
+    details.group > summary { cursor: pointer; }
+    .sf-row { margin: 6px 0; }
+    input[type='range'] { width: 100%; }
+    button { font-family: monospace; background: #222; color: #eee; border: 1px solid #555; padding: 3px 8px; cursor: pointer; }
+    button:disabled { color: #666; border-color: #333; cursor: default; }
+    output { color: #8fc7ff; }
+    #metricChart { display: block; background: #000; }
+    pre { white-space: pre-wrap; word-break: break-all; color: #9c9; margin: 4px 0; }
+    dialog { background: #222; color: #eee; font-family: monospace; border: 1px solid #666; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+    [popover] { background: #222; color: #eee; font-family: monospace; border: 1px solid #666; padding: 8px; }
+    .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; }
+    small { color: #999; }
+
+    /* Chromium-only: customizable select + anchored popover (harmless elsewhere) */
+    select.fancy, select.fancy::picker(select) { appearance: base-select; }
+    select.fancy { background: #222; color: #eee; border: 1px solid #555; }
+    select.fancy::picker(select) { background: #222; color: #eee; border: 1px solid #666; }
+    #anchorBtn { anchor-name: --demo-anchor; }
+    #anchoredPop { position: absolute; position-anchor: --demo-anchor; position-area: top; margin: 4px; }
   </style>
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
@@ -18,53 +63,221 @@
 
   <canvas id="scene"></canvas>
 
-  <!-- Entry point 1: hand-written HTML bound with bind(document.body, scope).
-       Attributes are dot-paths into the store — never expressions. -->
-  <details class="sf-panel" open>
-    <summary>controls (html + bind)</summary>
-    <div class="sf-body">
+  <!-- ═══ TOP BAR: experiment lifecycle ═══ -->
+  <header id="top">
+    <strong>simpleform</strong>
+    <span>
+      <button data-text="views.runLabel" data-on="click:actions.run"></button>
+      <!-- declarative modal: commandfor/command needs no JS wiring -->
+      <button commandfor="confirmReset" command="show-modal" data-disabled="views.running">reset</button>
+    </span>
+    <label>status <output data-text="status"></output></label>
+    <label>metric <output data-text="views.metricLabel"></output></label>
+    <!-- native progress, one-way data-bind (computeds welcome) -->
+    <label>progress <progress data-bind="views.progress" max="1"></progress></label>
+    <!-- native meter: gauge with good/bad bands -->
+    <label>health <meter data-bind="metric" min="0" max="1" low="0.1" high="0.7" optimum="0"></meter></label>
+    <canvas id="metricChart" width="220" height="30"></canvas>
+    <small data-show="views.done">complete — reset to run again</small>
+  </header>
 
-      <fieldset>
-        <legend>object</legend>
-        <div class="sf-row"><label>shape
-          <select data-bind="params.shape">
-            <option value="knot">torus knot</option>
-            <option value="box">box</option>
-            <option value="sphere">sphere</option>
-          </select></label></div>
-        <div class="sf-row"><label>scale <output data-text="views.scaleLabel"></output><br>
-          <input type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
-        <div class="sf-row"><label>spin x <output data-text="views.spinXLabel"></output><br>
-          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
-        <div class="sf-row"><label>spin y <output data-text="views.spinYLabel"></output><br>
-          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
-        <div class="sf-row"><label><input type="checkbox" data-bind="params.wireframe"> wireframe</label></div>
-        <div class="sf-row"><label>color <input type="color" data-bind="params.color"></label></div>
-      </fieldset>
+  <dialog id="confirmReset" closedby="any">
+    <p>Discard the current run?</p>
+    <button commandfor="confirmReset" command="close" data-on="click:actions.reset">discard</button>
+    <button commandfor="confirmReset" command="close">cancel</button>
+  </dialog>
 
-      <!-- data-each lives in its OWN container: Chrome cancels an in-progress
-           native slider drag when its fieldset's child list changes. -->
-      <fieldset>
-        <legend>live stats</legend>
-        <template data-each="views.stats" data-key="label">
-          <div><span data-text="$item.label"></span>: <span data-text="$item.value"></span></div>
-        </template>
-      </fieldset>
+  <!-- ═══ LEFT PANEL: every HTML form control, bound ═══ -->
+  <section id="left">
 
-      <fieldset>
-        <legend>experiment</legend>
+    <fieldset>
+      <legend>object
+        <button popovertarget="helpObject">?</button>
+      </legend>
+      <div popover id="helpObject">These drive the three.js mesh through
+        stage.js's narrow API. Drag any slider and watch the scene and the
+        right panel follow.</div>
+      <div class="sf-row"><label>shape
+        <select data-bind="params.shape">
+          <option value="knot">torus knot</option>
+          <option value="box">box</option>
+          <option value="sphere">sphere</option>
+        </select></label></div>
+      <div class="sf-row"><label>scale <output data-text="views.scaleLabel"></output><br>
+        <input type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
+      <div class="sf-row"><label>spin x <output data-text="views.spinXLabel"></output><br>
+        <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
+      <div class="sf-row"><label>spin y <output data-text="views.spinYLabel"></output><br>
+        <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
+      <div class="sf-row"><label><input type="checkbox" data-bind="params.wireframe"> wireframe</label></div>
+      <div class="sf-row"><label>color <input type="color" data-bind="params.color"></label></div>
+    </fieldset>
+
+    <!-- data-inert: the native inert attribute locks this whole subtree while running -->
+    <fieldset data-inert="views.running">
+      <legend>inert while running</legend>
+      <small>start the experiment: everything here stops taking focus or clicks</small>
+      <div class="sf-row"><label>a knob <input type="range" min="0" max="10" step="1" data-bind="g.inertDemo"></label></div>
+    </fieldset>
+
+    <!-- <details name="gallery">: native accordion — opening one closes the others.
+         The first one's open state is data-bind'ed into the store (watch the JSON). -->
+    <details class="group" name="gallery" data-bind="ui.textOpen">
+      <summary>text inputs</summary>
+      <div class="sf-row"><label>text <input type="text" data-bind="g.text"></label></div>
+      <div class="sf-row"><label>search <input type="search" data-bind="g.search"></label></div>
+      <div class="sf-row"><label>tel <input type="tel" data-bind="g.tel"></label></div>
+      <div class="sf-row"><label>url <input type="url" data-bind="g.url"></label></div>
+      <div class="sf-row"><label>email <input type="email" data-bind="g.email"></label></div>
+      <div class="sf-row"><label>password <input type="password" data-bind="g.password"></label></div>
+      <div class="sf-row"><label>textarea<br><textarea rows="2" data-bind="g.notes"></textarea></label></div>
+      <div class="sf-row"><label>combobox (datalist)
+        <input list="ports" data-bind="g.combo" placeholder="type or pick…">
+        <datalist id="ports">
+          <option value="/dev/ttyUSB0"></option>
+          <option value="/dev/ttyACM0"></option>
+          <option value="COM3"></option>
+        </datalist></label></div>
+    </details>
+
+    <details class="group" name="gallery">
+      <summary>numbers</summary>
+      <div class="sf-row"><label>number <input type="number" min="0" max="100" step="1" data-bind="g.number" data-wheel></label></div>
+      <div class="sf-row"><label>range <output data-text="g.range"></output><br>
+        <input type="range" min="0" max="1" step="0.01" data-bind="g.range" data-wheel></label></div>
+    </details>
+
+    <details class="group" name="gallery">
+      <summary>date &amp; time pickers</summary>
+      <div class="sf-row"><label>date <input type="date" id="galleryDate" data-bind="g.date"></label></div>
+      <div class="sf-row"><label>time <input type="time" data-bind="g.time"></label></div>
+      <div class="sf-row"><label>datetime-local <input type="datetime-local" data-bind="g.datetimeLocal"></label></div>
+      <div class="sf-row"><label>month <input type="month" data-bind="g.month"></label></div>
+      <div class="sf-row"><label>week <input type="week" data-bind="g.week"></label></div>
+    </details>
+
+    <details class="group" name="gallery">
+      <summary>choices</summary>
+      <div class="sf-row"><label><input type="checkbox" data-bind="g.checkbox"> checkbox</label></div>
+      <div class="sf-row">radio group:
+        <label><input type="radio" name="radioDemo" value="alpha" data-bind="g.radio"> alpha</label>
+        <label><input type="radio" name="radioDemo" value="beta" data-bind="g.radio"> beta</label>
+        <label><input type="radio" name="radioDemo" value="gamma" data-bind="g.radio"> gamma</label>
+      </div>
+      <div class="sf-row"><label>select
+        <select data-bind="g.select">
+          <option value="one">one</option><option value="two">two</option><option value="three">three</option>
+        </select></label></div>
+      <div class="sf-row"><label>select + optgroup
+        <select data-bind="g.grouped">
+          <optgroup label="low"><option value="min">min</option><option value="mid">mid</option></optgroup>
+          <optgroup label="high"><option value="max">max</option></optgroup>
+        </select></label></div>
+      <div class="sf-row"><label>select multiple (ctrl-click)<br>
+        <select multiple size="4" data-bind="g.multi">
+          <option value="a">alpha</option><option value="b">beta</option>
+          <option value="c">gamma</option><option value="d">delta</option>
+        </select></label></div>
+    </details>
+
+    <details class="group" name="gallery">
+      <summary>file &amp; buttons</summary>
+      <div class="sf-row"><label>file (one-way → store)<br>
+        <input type="file" multiple data-bind="g.files"></label></div>
+      <div class="sf-row"><button data-on="click:actions.ping">plain &lt;button&gt;</button>
+        <input type="button" value="input type=button" data-on="click:actions.ping"></div>
+      <form data-on="submit:actions.formSubmit">
+        <div class="sf-row"><label>in a real form <input type="text" data-bind="g.formText"></label></div>
         <div class="sf-row">
-          <button data-text="views.runLabel" data-on="click:actions.run"></button>
-          <button data-on="click:actions.reset" data-disabled="views.running">reset</button>
+          <input type="submit" value="submit">
+          <input type="reset" value="reset">
+          <input type="image" alt="image submit" width="16" height="16"
+                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%238fc7ff'/%3E%3C/svg%3E">
         </div>
-        <div class="sf-row"><label>status <output data-text="status"></output></label></div>
-        <div class="sf-row"><label>metric <output data-text="views.metricLabel"></output></label></div>
-        <small data-show="views.done">experiment complete — reset to run again</small>
-        <canvas id="metricChart" width="240" height="50"></canvas>
-      </fieldset>
+        <small>type=reset resets the DOM only — the store never hears it.
+        This is why dashboards use buttons + actions, not form machinery.</small>
+      </form>
+      <input type="hidden" data-bind="g.hidden">
+      <small>an input type=hidden is bound above — see it in the JSON, nowhere else</small>
+    </details>
 
-    </div>
-  </details>
+    <details class="group" name="gallery">
+      <summary>display elements</summary>
+      <div class="sf-row"><label>output <output data-text="g.number"></output></label></div>
+      <div class="sf-row"><label>meter <meter data-bind="g.range" min="0" max="1"></meter></label></div>
+      <div class="sf-row"><label>progress <progress data-bind="g.range" max="1"></progress></label></div>
+      <div class="sf-row">last ping: <time data-text="g.pinged"></time></div>
+      <div class="sf-row"><data value="42">the answer (a &lt;data&gt; element)</data></div>
+      <div hidden="until-found">This paragraph is hidden="until-found" — Ctrl+F
+        for the word polytopy and the browser reveals it.</div>
+    </details>
+
+    <fieldset>
+      <legend>live stats</legend>
+      <template data-each="views.stats" data-key="label">
+        <div><span data-text="$item.label"></span>: <span data-text="$item.value"></span></div>
+      </template>
+    </fieldset>
+
+    <fieldset>
+      <legend>store snapshot (live)</legend>
+      <small>every control above writes here — reproducibility is one JSON.stringify away</small>
+      <pre data-text="views.galleryJson"></pre>
+    </fieldset>
+
+  </section>
+
+  <!-- ═══ RIGHT PANEL: the same store via the panel builder (see app.js) ═══ -->
+  <section id="right"></section>
+
+  <!-- ═══ BOTTOM BAR: Chromium-only / emerging platform features ═══ -->
+  <footer id="bottom">
+    <fieldset>
+      <legend>feature support (this browser)</legend>
+      <template data-each="views.features" data-key="label">
+        <div><span data-text="$item.value"></span> <span data-text="$item.label"></span></div>
+      </template>
+    </fieldset>
+
+    <fieldset>
+      <legend>customizable &lt;select&gt;</legend>
+      <small>appearance: base-select + &lt;selectedcontent&gt; — bound to the same shape signal</small>
+      <div class="sf-row">
+        <select class="fancy" data-bind="params.shape">
+          <button><selectedcontent></selectedcontent></button>
+          <option value="knot"><span class="swatch" style="background:#8fc7ff"></span>torus knot</option>
+          <option value="box"><span class="swatch" style="background:#c78fff"></span>box</option>
+          <option value="sphere"><span class="swatch" style="background:#8fffc7"></span>sphere</option>
+        </select>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>anchored popover</legend>
+      <small>CSS anchor positioning: the popover pins above its button</small>
+      <div class="sf-row"><button id="anchorBtn" popovertarget="anchoredPop">open anchored popover</button></div>
+      <div popover id="anchoredPop">anchored above the invoker, light-dismiss included</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>interest invokers</legend>
+      <small>interesttarget: hover/focus opens it — native tooltips (experimental)</small>
+      <div class="sf-row"><button interesttarget="hoverTip">hover me</button></div>
+      <div popover="hint" id="hoverTip">a native hover tooltip, no JS</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>showPicker()</legend>
+      <small>programmatically opens the gallery's date picker</small>
+      <div class="sf-row"><button data-on="click:actions.openDatePicker">open date picker</button></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>&lt;permission&gt; element</legend>
+      <small>native camera-permission button (experimental; blank if unsupported)</small>
+      <div class="sf-row"><permission type="camera"></permission></div>
+    </fieldset>
+  </footer>
 
   <script type="module" src="./app.js"></script>
 </body>

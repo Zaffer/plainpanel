@@ -31,6 +31,8 @@ export {
   bindText,
   bindShow,
   bindDisabled,
+  bindInert,
+  bindGauge,
   bindValue,
   bindWheel,
   listen,

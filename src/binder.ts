@@ -14,9 +14,13 @@
  *
  * Vocabulary:
  *   data-text="path"        textContent ← value
- *   data-bind="path"        two-way form control ⇄ signal (writable signal required)
+ *   data-bind="path"        two-way form control ⇄ signal (writable signal required).
+ *                           Handles checkbox/radio/select[multiple]/file/<details>
+ *                           per bindValue; on <progress>/<meter> it is one-way
+ *                           (value ← readable, computeds welcome)
  *   data-show="path"        hidden ← !value
  *   data-disabled="path"    disabled ← value
+ *   data-inert="path"       inert ← value (whole-subtree disable: focus, clicks, a11y)
  *   data-on="click:path"    listener → function in scope (space-separate multiple pairs)
  *   data-wheel              wheel nudges a data-bind'ed range/number input by its step
  *   data-each="path"        on <template>: one row per array item; rows see
@@ -29,7 +33,7 @@
  *                           "$index" for explicitly positional rows.
  */
 import { effect, isComputed, isSignal, signal, untracked, type Signal, type Stop } from './signals';
-import { bindDisabled, bindShow, bindText, bindValue, bindWheel, listen } from './bindings';
+import { bindDisabled, bindGauge, bindInert, bindShow, bindText, bindValue, bindWheel, listen } from './bindings';
 
 export type Scope = object;
 
@@ -70,7 +74,7 @@ export function resolveTarget(scope: Scope, path: string): unknown {
   return walk(scope, path);
 }
 
-const SELECTOR = '[data-text],[data-bind],[data-show],[data-disabled],[data-on],[data-each]';
+const SELECTOR = '[data-text],[data-bind],[data-show],[data-disabled],[data-inert],[data-on],[data-each]';
 
 /**
  * Binds root and its descendants against the scope. Returns a Stop that
@@ -127,10 +131,15 @@ export function bind(root: Element | Document | DocumentFragment, scope: Scope):
     if (d.disabled !== undefined) {
       stops.push(bindDisabled(el as Element & { disabled: boolean }, read(d.disabled)));
     }
+    if (d.inert !== undefined) stops.push(bindInert(el as HTMLElement, read(d.inert)));
     if (d.bind !== undefined) {
-      const sig = writable(d.bind, 'data-bind');
-      stops.push(bindValue(el as HTMLInputElement, sig));
-      if (d.wheel !== undefined) stops.push(bindWheel(el as HTMLInputElement, sig));
+      if (el instanceof HTMLProgressElement || el instanceof HTMLMeterElement) {
+        stops.push(bindGauge(el, read(d.bind))); // one-way: computeds welcome
+      } else {
+        const sig = writable(d.bind, 'data-bind');
+        stops.push(bindValue(el as HTMLInputElement, sig));
+        if (d.wheel !== undefined) stops.push(bindWheel(el as HTMLInputElement, sig));
+      }
     }
     if (d.on !== undefined) {
       for (const pair of d.on.trim().split(/\s+/)) {

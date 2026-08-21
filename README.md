@@ -94,9 +94,10 @@ Scans `root` for `data-*` attributes, wires them against `scope`, returns a
 | Attribute | On | Does |
 |---|---|---|
 | `data-text="path"` | any element | `textContent` ← value |
-| `data-bind="path"` | input/select/textarea | two-way ⇄ **signal** (typed: number/boolean/string by the signal's current value; NaN never written) |
+| `data-bind="path"` | input/select/textarea/details | two-way ⇄ **signal** (typed: number/boolean/string by the signal's current value; NaN never written). Checkbox → boolean; radio group → one signal, checked by value; `select[multiple]` → string[]; `type=file` → one-way DOM→signal (File[]); `<details>` → open ⇄ boolean; `<progress>`/`<meter>` → one-way value ← readable (computeds welcome) |
 | `data-show="path"` | any element | native `hidden` ← `!value` |
 | `data-disabled="path"` | button/input/… | `disabled` ← value — state disables controls, it never hides or moves them |
+| `data-inert="path"` | any element | native `inert` ← value — whole-subtree disable (focus, clicks, a11y) |
 | `data-on="click:path"` | any element | listener → function in scope (space-separate multiple `event:path` pairs) |
 | `data-wheel` | range/number with `data-bind` | mouse wheel nudges by `step` |
 | `data-each="path"` | `<template>` | one row per array item; rows see `$item` / `$index` plus outer scope. **Requires `data-key`.** Reconciled by key: content changes update rows **in place** (zero DOM mutation); a kept item at a new position moves its DOM nodes with it, so focus and canvas state travel with the item |
@@ -130,6 +131,7 @@ p.select('pattern', params.pattern, ['spiral', 'xor', { value: 'rnd', label: 'ra
 p.button(views.trainLabel, actions.train, { disabled: views.running }); // label may be a computed
 p.readout('loss', views.lossLabel);
 p.text('run name', params.runName);
+p.color('trace color', params.traceColor);
 p.add(myCanvas);                       // escape hatch: any element
 const f = p.folder('advanced');        // nested collapsible group
 p.dispose();                           // stops every binding, removes the panel
@@ -187,13 +189,18 @@ npm run serve      # static server → open /examples/demo/
 
 ## Example
 
-[`examples/demo/`](examples/demo/) is the full pattern in ~300 lines, no build
-step: one store driving three surfaces at once — a hand-written HTML panel
-(`bind`), a generated panel (`panel()`), and a three.js object in the middle of
-the scene (imperative escape hatch behind `stage.js`'s narrow API), plus a fake
-experiment streaming a metric into a `series()` sparkline and `data-each` live
-stats keyed by name. Degrades gracefully when WebGL is unavailable — the stage
-becomes an inert stub with the same API.
+[`examples/demo/`](examples/demo/) is the kitchen sink, no build step: a
+four-panel dashboard (top bar, scrollable left/right panels, bottom bar)
+around a three.js object driven by the store through `stage.js`'s narrow API.
+The left panel binds **every HTML form control** — all text flavors, number,
+range, every date/time picker, color, checkbox, radio group, selects
+(single/optgroup/multiple), datalist combobox, file, buttons, form machinery,
+output/progress/meter — each feeding a live JSON store snapshot. It also
+exercises the native extras (`<details name>` accordions with store-bound open
+state, popover, `<dialog>` via `commandfor`, `inert`, `hidden=until-found`)
+and a bottom bar of Chromium-only features with live support badges
+(customizable `<select>`, anchored popovers, `interesttarget`, `<permission>`,
+`showPicker()`). Degrades gracefully when WebGL is unavailable.
 
 ## License
 

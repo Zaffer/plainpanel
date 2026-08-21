@@ -590,31 +590,80 @@ function bindDisabled(el, source) {
   });
 }
 function bindValue(el, sig) {
-  const isCheckbox = el.type === "checkbox";
+  if (el instanceof HTMLDetailsElement) {
+    const stop2 = effect2(() => {
+      el.open = !!sig();
+    });
+    const onToggle = () => sig(el.open);
+    el.addEventListener("toggle", onToggle);
+    return () => {
+      stop2();
+      el.removeEventListener("toggle", onToggle);
+    };
+  }
+  const type = el.type;
+  if (type === "file") {
+    const onInput2 = () => sig([...el.files ?? []]);
+    el.addEventListener("input", onInput2);
+    return () => el.removeEventListener("input", onInput2);
+  }
   const kind = untracked(() => typeof sig());
-  const stop = effect2(() => {
-    const v = sig();
-    if (isCheckbox) el.checked = !!v;
-    else el.value = String(v);
-  });
-  const onInput = () => {
-    if (isCheckbox) return sig(el.checked);
-    if (kind === "number") {
-      const n = Number(el.value);
-      if (!Number.isNaN(n)) sig(n);
-      return;
-    }
-    sig(el.value);
-  };
+  const coerce = (raw) => kind === "number" ? Number(raw) : raw;
+  let stop;
+  let onInput;
+  if (type === "checkbox") {
+    stop = effect2(() => {
+      el.checked = !!sig();
+    });
+    onInput = () => sig(el.checked);
+  } else if (type === "radio") {
+    stop = effect2(() => {
+      el.checked = sig() === coerce(el.value);
+    });
+    onInput = () => {
+      if (el.checked) sig(coerce(el.value));
+    };
+  } else if (el instanceof HTMLSelectElement && el.multiple) {
+    stop = effect2(() => {
+      const selected = sig();
+      if (!Array.isArray(selected)) {
+        throw new Error("simpleform: a select[multiple] binding needs a signal holding an array");
+      }
+      for (const option of el.options) option.selected = selected.includes(option.value);
+    });
+    onInput = () => sig([...el.selectedOptions].map((o) => o.value));
+  } else {
+    stop = effect2(() => {
+      el.value = String(sig());
+    });
+    onInput = () => {
+      if (kind === "number") {
+        const n = Number(el.value);
+        if (!Number.isNaN(n)) sig(n);
+        return;
+      }
+      sig(el.value);
+    };
+  }
   el.addEventListener("input", onInput);
   const onDragStart = (e) => e.preventDefault();
-  const isRange = el.type === "range";
+  const isRange = type === "range";
   if (isRange) el.addEventListener("dragstart", onDragStart);
   return () => {
     stop();
     el.removeEventListener("input", onInput);
     if (isRange) el.removeEventListener("dragstart", onDragStart);
   };
+}
+function bindGauge(el, source) {
+  return effect2(() => {
+    el.value = Number(source()) || 0;
+  });
+}
+function bindInert(el, source) {
+  return effect2(() => {
+    el.inert = !!source();
+  });
 }
 function bindWheel(el, sig) {
   const onWheel = (e) => {
@@ -657,7 +706,7 @@ function resolveValue(scope, path) {
 function resolveTarget(scope, path) {
   return walk(scope, path);
 }
-var SELECTOR = "[data-text],[data-bind],[data-show],[data-disabled],[data-on],[data-each]";
+var SELECTOR = "[data-text],[data-bind],[data-show],[data-disabled],[data-inert],[data-on],[data-each]";
 function bind(root, scope) {
   const stops = [];
   const read = (path) => {
@@ -698,10 +747,15 @@ function bind(root, scope) {
     if (d.disabled !== void 0) {
       stops.push(bindDisabled(el, read(d.disabled)));
     }
+    if (d.inert !== void 0) stops.push(bindInert(el, read(d.inert)));
     if (d.bind !== void 0) {
-      const sig = writable(d.bind, "data-bind");
-      stops.push(bindValue(el, sig));
-      if (d.wheel !== void 0) stops.push(bindWheel(el, sig));
+      if (el instanceof HTMLProgressElement || el instanceof HTMLMeterElement) {
+        stops.push(bindGauge(el, read(d.bind)));
+      } else {
+        const sig = writable(d.bind, "data-bind");
+        stops.push(bindValue(el, sig));
+        if (d.wheel !== void 0) stops.push(bindWheel(el, sig));
+      }
     }
     if (d.on !== void 0) {
       for (const pair of d.on.trim().split(/\s+/)) {
@@ -983,6 +1037,8 @@ export {
   batch,
   bind,
   bindDisabled,
+  bindGauge,
+  bindInert,
   bindShow,
   bindText,
   bindValue,

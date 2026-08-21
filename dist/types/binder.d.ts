@@ -14,9 +14,13 @@
  *
  * Vocabulary:
  *   data-text="path"        textContent ← value
- *   data-bind="path"        two-way form control ⇄ signal (writable signal required)
+ *   data-bind="path"        two-way form control ⇄ signal (writable signal required).
+ *                           Handles checkbox/radio/select[multiple]/file/<details>
+ *                           per bindValue; on <progress>/<meter> it is one-way
+ *                           (value ← readable, computeds welcome)
  *   data-show="path"        hidden ← !value
  *   data-disabled="path"    disabled ← value
+ *   data-inert="path"       inert ← value (whole-subtree disable: focus, clicks, a11y)
  *   data-on="click:path"    listener → function in scope (space-separate multiple pairs)
  *   data-wheel              wheel nudges a data-bind'ed range/number input by its step
  *   data-each="path"        on <template>: one row per array item; rows see

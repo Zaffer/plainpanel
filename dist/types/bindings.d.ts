@@ -21,8 +21,21 @@ export declare function bindDisabled(el: Element & {
  * from a half-typed number input is never written into the store.
  * Programmatic writes don't fire 'input', and the signal's === short-circuit
  * kills the echo from our own writeback, so this cannot loop.
+ *
+ * Element-specific behavior:
+ *   checkbox            checked ⇄ boolean signal
+ *   radio               checked ⇄ (signal === this radio's value); one signal per group
+ *   select[multiple]    selected options ⇄ string[] signal
+ *   input[type=file]    one-way DOM → signal (browsers forbid setting a file
+ *                       input's value); the signal receives File[]
+ *   <details>           open ⇄ boolean signal (via the toggle event)
+ *   everything else     value string ⇄ signal, coerced to the signal's type
  */
-export declare function bindValue(el: ValueElement, sig: Signal<any>): Stop;
+export declare function bindValue(el: ValueElement | HTMLDetailsElement, sig: Signal<any>): Stop;
+/** One-way value display for <progress>/<meter> — no input events exist here. */
+export declare function bindGauge(el: HTMLProgressElement | HTMLMeterElement, source: Readable<unknown>): Stop;
+/** Whole-subtree disable via the native inert attribute: focus, clicks, and a11y. */
+export declare function bindInert(el: HTMLElement, source: Readable<unknown>): Stop;
 /** Mouse wheel nudges a range/number input by its step and writes the signal. */
 export declare function bindWheel(el: HTMLInputElement, sig: Signal<number>): Stop;
 /** addEventListener with a Stop, so listeners tear down with their scope. */

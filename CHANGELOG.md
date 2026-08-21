@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 — 2026-08-21
+
+- Full form-control coverage in `data-bind`: radio groups (one signal per
+  group, checked by value), `select[multiple]` (string[] signal),
+  `input[type=file]` (one-way DOM→signal, File[]), `<details>` (open ⇄
+  boolean via toggle), `<progress>`/`<meter>` (one-way value ← readable,
+  computeds welcome).
+- New `data-inert` attribute — whole-subtree disable via the native inert
+  attribute; `bindGauge`/`bindInert` primitives exported.
+- Demo rebuilt as a four-panel kitchen sink: every HTML control bound with a
+  live JSON store snapshot, native extras (accordion `<details name>`,
+  popover, dialog + commandfor, hidden=until-found), and a Chromium-only
+  bottom bar with feature-support badges.
+
 ## 0.3.0 — 2026-08-21
 
 - **`data-key` is now compulsory on `data-each`** (Angular-`@for` reasoning: a
