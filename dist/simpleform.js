@@ -646,13 +646,9 @@ function bindValue(el, sig) {
     };
   }
   el.addEventListener("input", onInput);
-  const onDragStart = (e) => e.preventDefault();
-  const isRange = type === "range";
-  if (isRange) el.addEventListener("dragstart", onDragStart);
   return () => {
     stop();
     el.removeEventListener("input", onInput);
-    if (isRange) el.removeEventListener("dragstart", onDragStart);
   };
 }
 function bindGauge(el, source) {

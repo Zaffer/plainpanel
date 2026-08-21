@@ -1,6 +1,6 @@
 {
   "name": "simpleform",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Signals-first micro-library for research dashboard controls. Real HTML, one store, no build step for consumers.",
   "type": "module",
   "exports": {

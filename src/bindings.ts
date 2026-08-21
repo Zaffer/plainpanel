@@ -109,18 +109,9 @@ export function bindValue(el: ValueElement | HTMLDetailsElement, sig: Signal<any
 
   el.addEventListener('input', onInput);
 
-  // A press on a slider is always a thumb drag. When a text selection spans
-  // the control, the browser otherwise starts an HTML5 drag OF THE SELECTION
-  // mid-gesture (the no-drop cursor; the thumb freezes). Cancelling dragstart
-  // keeps the gesture; what is selectable stays the app's decision.
-  const onDragStart = (e: Event) => e.preventDefault();
-  const isRange = type === 'range';
-  if (isRange) el.addEventListener('dragstart', onDragStart);
-
   return () => {
     stop();
     el.removeEventListener('input', onInput);
-    if (isRange) el.removeEventListener('dragstart', onDragStart);
   };
 }
 
