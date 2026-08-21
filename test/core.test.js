@@ -8,7 +8,8 @@ import {
   effect,
   batch,
   untracked,
-  resolvePath,
+  resolveValue,
+  resolveTarget,
   series,
 } from '../dist/simpleform.js';
 
@@ -95,14 +96,30 @@ test('effect: cleanup runs before re-run and on stop', () => {
   assert.deepEqual(log, ['run 0', 'clean 0', 'run 1', 'clean 1']);
 });
 
-test('resolvePath: walks dots, sees prototype chain, throws loudly on a miss', () => {
+test('resolveTarget: walks dots, sees prototype chain, throws loudly on a miss', () => {
   const inner = signal(5);
   const parent = { params: { rate: inner } };
   const child = Object.assign(Object.create(parent), { $index: 3 });
-  assert.equal(resolvePath(child, 'params.rate'), inner);
-  assert.equal(resolvePath(child, '$index'), 3);
-  assert.throws(() => resolvePath(parent, 'params.typo'), /path "params\.typo" not found .* "typo"/);
-  assert.throws(() => resolvePath(parent, 'nope.rate'), /stopped at "nope"/);
+  assert.equal(resolveTarget(child, 'params.rate'), inner);
+  assert.equal(resolveTarget(child, '$index'), 3);
+  assert.throws(() => resolveTarget(parent, 'params.typo'), /path "params\.typo" not found .* "typo"/);
+  assert.throws(() => resolveTarget(parent, 'nope.rate'), /stopped at "nope"/);
+});
+
+test('resolveValue: reads through signals mid-path and at the leaf, reactively', () => {
+  const snapshot = signal({ pose: { x: 1 } });
+  const scope = { snapshot, rate: signal(5), plain: { n: 7 }, fn: () => 9 };
+  assert.equal(resolveValue(scope, 'snapshot.pose.x'), 1);
+  assert.equal(resolveValue(scope, 'rate'), 5);
+  assert.equal(resolveValue(scope, 'plain.n'), 7);
+  assert.throws(() => resolveValue(scope, 'fn'), /plain function/);
+
+  // reactive: an effect reading through the signal re-runs when it is swapped
+  const seen = [];
+  const stop = effect(() => seen.push(resolveValue(scope, 'snapshot.pose.x')));
+  snapshot({ pose: { x: 2 } });
+  assert.deepEqual(seen, [1, 2]);
+  stop();
 });
 
 test('series: rolling capacity, gaps, reactive read, clear', () => {

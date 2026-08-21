@@ -46,9 +46,14 @@ export function computed<T>(getter: (previous?: T) => T): Computed<T> {
  * Runs `fn` now and again whenever any signal it read changes.
  * `fn` may return a cleanup function; it runs before each re-run and on stop.
  * Effects created inside another effect are cleaned up when the outer re-runs.
+ * Non-function returns are discarded, so `effect(() => arr.push(x))` — an
+ * arrow's implicit return — can't be mistaken for a cleanup and crash later.
  */
-export function effect(fn: () => void | (() => void)): Stop {
-  return alienEffect(fn);
+export function effect(fn: () => unknown): Stop {
+  return alienEffect(() => {
+    const cleanup = fn();
+    return typeof cleanup === 'function' ? (cleanup as () => void) : undefined;
+  });
 }
 
 /** Groups every effect created inside `fn`; the returned Stop disposes them all. */

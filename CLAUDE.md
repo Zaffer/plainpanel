@@ -23,6 +23,20 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 - Keep the library small. A feature that can live in an example instead of
   src/ lives in an example.
 
+## Hard-won rules
+
+- Chrome silently cancels an in-progress native slider drag when the child
+  list of the slider's <fieldset> changes (vanilla-reproducible; no event, no
+  error). data-each only structurally mutates on length change, but still:
+  keep data-each templates in their own container, never in the same fieldset
+  as controls that drive them.
+- Synthetic events (dispatchEvent) do NOT exercise native drag gestures.
+  Verify sliders with real input (CDP Input domain / chrome-devtools drag),
+  not just synthetic input events.
+- Inside a data-each rebuild effect, row creation and $item writes are wrapped
+  in untracked(): row effects must be top-level (nested ones would be purged
+  on every re-run) and item writes must not subscribe the rebuild effect.
+
 ## Commands
 
 - `npm test` — build + node --test (must stay green; zero test deps)

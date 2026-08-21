@@ -24,8 +24,10 @@ export declare function computed<T>(getter: (previous?: T) => T): Computed<T>;
  * Runs `fn` now and again whenever any signal it read changes.
  * `fn` may return a cleanup function; it runs before each re-run and on stop.
  * Effects created inside another effect are cleaned up when the outer re-runs.
+ * Non-function returns are discarded, so `effect(() => arr.push(x))` — an
+ * arrow's implicit return — can't be mistaken for a cleanup and crash later.
  */
-export declare function effect(fn: () => void | (() => void)): Stop;
+export declare function effect(fn: () => unknown): Stop;
 /** Groups every effect created inside `fn`; the returned Stop disposes them all. */
 export declare function effectScope(fn: () => void): Stop;
 /** Apply several writes as one atomic update: effects run once, after all writes. */

@@ -25,7 +25,7 @@ export {
   type Stop,
 } from './signals';
 
-export { bind, resolvePath, type Scope } from './binder';
+export { bind, resolveValue, resolveTarget, type Scope } from './binder';
 
 export {
   bindText,

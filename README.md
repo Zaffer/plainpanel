@@ -99,10 +99,21 @@ Scans `root` for `data-*` attributes, wires them against `scope`, returns a
 | `data-disabled="path"` | button/input/… | `disabled` ← value — state disables controls, it never hides or moves them |
 | `data-on="click:path"` | any element | listener → function in scope (space-separate multiple `event:path` pairs) |
 | `data-wheel` | range/number with `data-bind` | mouse wheel nudges by `step` |
-| `data-each="path"` | `<template>` | clone content per array item; rows see `$item` / `$index` plus outer scope; rebuilds all rows on array change (simple over clever) |
+| `data-each="path"` | `<template>` | one row per array item; rows see `$item` / `$index` plus outer scope. Reconciled by position: content changes update rows **in place** (zero DOM mutation), only length changes add/remove tail rows |
 
 Paths are dot-walked (`params.learningRate`), prototype chain included. A miss
 throws with the full path. No expressions, ever.
+
+**Paths read through signals.** A segment holding a signal or computed is read
+(reactively) and the walk continues into its value: `data-text="snapshot.pose.x"`
+works when `snapshot` is one signal holding the latest server state, and
+`$item.size` stays live when a row's item is updated in place.
+
+**Browser rule — sliders and fieldsets.** Chrome silently cancels an
+in-progress native slider drag when the child list of the slider's `<fieldset>`
+changes (pure-vanilla behavior, any framework triggers it). `data-each` only
+mutates structure when the array length changes, but still: put `data-each`
+templates in their own container, never beside the controls that drive them.
 
 ## panel(title, opts?)
 

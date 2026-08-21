@@ -548,7 +548,10 @@ function computed2(getter) {
   return Object.freeze(computed(getter));
 }
 function effect2(fn) {
-  return effect(fn);
+  return effect(() => {
+    const cleanup = fn();
+    return typeof cleanup === "function" ? cleanup : void 0;
+  });
 }
 function effectScope2(fn) {
   return effectScope(fn);
@@ -619,15 +622,19 @@ function bindWheel(el, sig) {
   el.addEventListener("wheel", onWheel, { passive: false });
   return () => el.removeEventListener("wheel", onWheel);
 }
-function listen(el, type, handler2) {
-  el.addEventListener(type, handler2);
-  return () => el.removeEventListener(type, handler2);
+function listen(el, type, handler) {
+  el.addEventListener(type, handler);
+  return () => el.removeEventListener(type, handler);
 }
 
 // src/binder.ts
-function resolvePath(scope, path) {
+function isReadable(v) {
+  return typeof v === "function" && (isSignal(v) || isComputed(v));
+}
+function walk(scope, path) {
   let current = scope;
   for (const key of path.split(".")) {
+    if (isReadable(current)) current = current();
     if (current == null || !(key in Object(current))) {
       throw new Error(`simpleform: path "${path}" not found in scope (stopped at "${key}")`);
     }
@@ -635,28 +642,41 @@ function resolvePath(scope, path) {
   }
   return current;
 }
-function readable(scope, path) {
-  const v = resolvePath(scope, path);
-  if (typeof v === "function") return v;
-  return () => v;
-}
-function writableSignal(scope, path, attr) {
-  const v = resolvePath(scope, path);
-  if (typeof v !== "function" || !isSignal(v)) {
-    throw new Error(`simpleform: ${attr}="${path}" must point to a signal(), got ${typeof v}`);
+function resolveValue(scope, path) {
+  const v = walk(scope, path);
+  if (isReadable(v)) return v();
+  if (typeof v === "function") {
+    throw new Error(`simpleform: path "${path}" resolves to a plain function \u2014 bindable values must be signal(), computed(), or plain data`);
   }
   return v;
 }
-function handler(scope, path) {
-  const v = resolvePath(scope, path);
-  if (typeof v !== "function") {
-    throw new Error(`simpleform: data-on handler "${path}" is not a function`);
-  }
-  return v;
+function resolveTarget(scope, path) {
+  return walk(scope, path);
 }
 var SELECTOR = "[data-text],[data-bind],[data-show],[data-disabled],[data-on],[data-each]";
 function bind(root, scope) {
   const stops = [];
+  const read = (path) => {
+    untracked(() => resolveValue(scope, path));
+    return () => resolveValue(scope, path);
+  };
+  const writable = (path, attr) => {
+    const leaf = untracked(() => resolveTarget(scope, path));
+    if (!(typeof leaf === "function" && isSignal(leaf))) {
+      throw new Error(`simpleform: ${attr}="${path}" must point to a signal(), got ${typeof leaf}`);
+    }
+    return ((...args) => {
+      const target = resolveTarget(scope, path);
+      return args.length ? target(args[0]) : target();
+    });
+  };
+  const handler = (path) => {
+    const leaf = untracked(() => resolveTarget(scope, path));
+    if (typeof leaf !== "function" || isReadable(leaf)) {
+      throw new Error(`simpleform: data-on handler "${path}" is not a function`);
+    }
+    return (e) => resolveTarget(scope, path)(e);
+  };
   const targets = [];
   if (root instanceof Element && root.matches(SELECTOR)) targets.push(root);
   targets.push(...root.querySelectorAll(SELECTOR));
@@ -669,13 +689,13 @@ function bind(root, scope) {
       stops.push(bindEach(el, scope));
       continue;
     }
-    if (d.text !== void 0) stops.push(bindText(el, readable(scope, d.text)));
-    if (d.show !== void 0) stops.push(bindShow(el, readable(scope, d.show)));
+    if (d.text !== void 0) stops.push(bindText(el, read(d.text)));
+    if (d.show !== void 0) stops.push(bindShow(el, read(d.show)));
     if (d.disabled !== void 0) {
-      stops.push(bindDisabled(el, readable(scope, d.disabled)));
+      stops.push(bindDisabled(el, read(d.disabled)));
     }
     if (d.bind !== void 0) {
-      const sig = writableSignal(scope, d.bind, "data-bind");
+      const sig = writable(d.bind, "data-bind");
       stops.push(bindValue(el, sig));
       if (d.wheel !== void 0) stops.push(bindWheel(el, sig));
     }
@@ -683,7 +703,7 @@ function bind(root, scope) {
       for (const pair of d.on.trim().split(/\s+/)) {
         const i = pair.indexOf(":");
         if (i < 1) throw new Error(`simpleform: data-on="${pair}" must be "event:path"`);
-        stops.push(listen(el, pair.slice(0, i), handler(scope, pair.slice(i + 1))));
+        stops.push(listen(el, pair.slice(0, i), handler(pair.slice(i + 1))));
       }
     }
   }
@@ -693,28 +713,37 @@ function bind(root, scope) {
 }
 function bindEach(tpl, scope) {
   const path = (tpl.dataset.each ?? "").trim();
-  const list = readable(scope, path);
-  return effect2(() => {
-    const items = list();
+  const rows = [];
+  const removeRow = (row) => {
+    row.stop();
+    for (const node of row.nodes) node.remove();
+  };
+  const stopEffect = effect2(() => {
+    const items = resolveValue(scope, path);
     if (!Array.isArray(items)) {
       throw new Error(`simpleform: data-each="${path}" must read an array, got ${typeof items}`);
     }
-    const rowStops = [];
-    const rowNodes = [];
-    const frag = document.createDocumentFragment();
-    items.forEach((item, index) => {
-      const clone = tpl.content.cloneNode(true);
-      const rowScope = Object.assign(Object.create(scope), { $item: item, $index: index });
-      rowStops.push(bind(clone, rowScope));
-      rowNodes.push(...clone.childNodes);
-      frag.append(clone);
+    untracked(() => {
+      for (let i = 0; i < Math.min(rows.length, items.length); i++) {
+        rows[i].item(items[i]);
+      }
+      for (let i = rows.length; i < items.length; i++) {
+        const item = signal2(items[i]);
+        const clone = tpl.content.cloneNode(true);
+        const rowScope = Object.assign(Object.create(scope), { $item: item, $index: i });
+        const stop = bind(clone, rowScope);
+        const nodes = [...clone.childNodes];
+        const anchor = rows.length ? rows[rows.length - 1].nodes[rows[rows.length - 1].nodes.length - 1] : tpl;
+        anchor.after(clone);
+        rows.push({ item, stop, nodes });
+      }
+      while (rows.length > items.length) removeRow(rows.pop());
     });
-    tpl.after(frag);
-    return () => {
-      for (const stop of rowStops) stop();
-      for (const node of rowNodes) node.remove();
-    };
   });
+  return () => {
+    stopEffect();
+    for (const row of rows.splice(0)) removeRow(row);
+  };
 }
 
 // src/panel.ts
@@ -917,7 +946,8 @@ export {
   isSignal,
   listen,
   panel,
-  resolvePath,
+  resolveTarget,
+  resolveValue,
   series,
   signal2 as signal,
   trigger,
