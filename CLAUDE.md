@@ -45,6 +45,9 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 ## Commands
 
 - `npm test` — build + node --test (must stay green; zero test deps)
-- `npm run serve` then open http://localhost:8137/examples/polytopy/
+- `npm run serve` then open http://localhost:8137/examples/demo/
+- Verifying the demo in a headless/WSL browser: WebGL may be unavailable —
+  the stage stubs itself out and the dashboard still runs; test 3D visually
+  in a real browser.
 - dist/ is committed (jsDelivr serves it from GitHub); rebuild before commit
   when src/ changed.

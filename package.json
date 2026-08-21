@@ -23,6 +23,19 @@
   },
   "repository": "github:Zaffer/simpleform",
   "license": "MIT",
+  "author": "James Wiles (https://github.com/Zaffer)",
+  "sideEffects": false,
+  "keywords": [
+    "signals",
+    "dashboard",
+    "controls",
+    "reactive",
+    "no-build",
+    "data-binding",
+    "control-panel",
+    "threejs",
+    "alien-signals"
+  ],
   "devDependencies": {
     "alien-signals": "3.2.1",
     "esbuild": "^0.25.0",

@@ -89,6 +89,13 @@ export class Panel {
     return this.field(label, input, sig);
   }
 
+  /** Native color picker bound to a '#rrggbb' string signal. */
+  color(label: string, sig: Signal<string>): this {
+    const input = document.createElement('input');
+    input.type = 'color';
+    return this.field(label, input, sig);
+  }
+
   toggle(label: string, sig: Signal<boolean>): this {
     const { row, labelEl } = this.row('');
     const input = document.createElement('input');

@@ -180,10 +180,20 @@ panel builder are both built from these; custom widgets should be too.
 npm install
 npm run build      # esbuild bundle + type declarations → dist/
 npm test           # build + node --test (zero test deps)
-npm run serve      # static server → open /examples/polytopy/
+npm run serve      # static server → open /examples/demo/
 ```
 
 `dist/` is committed so jsDelivr can serve straight from GitHub.
+
+## Example
+
+[`examples/demo/`](examples/demo/) is the full pattern in ~300 lines, no build
+step: one store driving three surfaces at once — a hand-written HTML panel
+(`bind`), a generated panel (`panel()`), and a three.js object in the middle of
+the scene (imperative escape hatch behind `stage.js`'s narrow API), plus a fake
+experiment streaming a metric into a `series()` sparkline and `data-each` live
+stats keyed by name. Degrades gracefully when WebGL is unavailable — the stage
+becomes an inert stub with the same API.
 
 ## License
 

@@ -836,6 +836,12 @@ var Panel = class _Panel {
     input.type = "text";
     return this.field(label, input, sig);
   }
+  /** Native color picker bound to a '#rrggbb' string signal. */
+  color(label, sig) {
+    const input = document.createElement("input");
+    input.type = "color";
+    return this.field(label, input, sig);
+  }
   toggle(label, sig) {
     const { row, labelEl } = this.row("");
     const input = document.createElement("input");

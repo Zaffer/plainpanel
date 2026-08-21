@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>simpleform demo</title>
+  <link rel="stylesheet" href="../../simpleform.css">
+  <style>
+    body { margin: 0; overflow: hidden; font-family: monospace; background: #111; color: #eee; }
+    #scene { position: fixed; inset: 0; display: block; }
+    fieldset { border: 1px solid #444; margin: 6px 0; }
+    #metricChart { display: block; margin-top: 6px; background: #000; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
+  </script>
+</head>
+<body>
+
+  <canvas id="scene"></canvas>
+
+  <!-- Entry point 1: hand-written HTML bound with bind(document.body, scope).
+       Attributes are dot-paths into the store — never expressions. -->
+  <details class="sf-panel" open>
+    <summary>controls (html + bind)</summary>
+    <div class="sf-body">
+
+      <fieldset>
+        <legend>object</legend>
+        <div class="sf-row"><label>shape
+          <select data-bind="params.shape">
+            <option value="knot">torus knot</option>
+            <option value="box">box</option>
+            <option value="sphere">sphere</option>
+          </select></label></div>
+        <div class="sf-row"><label>scale <output data-text="views.scaleLabel"></output><br>
+          <input type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
+        <div class="sf-row"><label>spin x <output data-text="views.spinXLabel"></output><br>
+          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
+        <div class="sf-row"><label>spin y <output data-text="views.spinYLabel"></output><br>
+          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
+        <div class="sf-row"><label><input type="checkbox" data-bind="params.wireframe"> wireframe</label></div>
+        <div class="sf-row"><label>color <input type="color" data-bind="params.color"></label></div>
+      </fieldset>
+
+      <!-- data-each lives in its OWN container: Chrome cancels an in-progress
+           native slider drag when its fieldset's child list changes. -->
+      <fieldset>
+        <legend>live stats</legend>
+        <template data-each="views.stats" data-key="label">
+          <div><span data-text="$item.label"></span>: <span data-text="$item.value"></span></div>
+        </template>
+      </fieldset>
+
+      <fieldset>
+        <legend>experiment</legend>
+        <div class="sf-row">
+          <button data-text="views.runLabel" data-on="click:actions.run"></button>
+          <button data-on="click:actions.reset" data-disabled="views.running">reset</button>
+        </div>
+        <div class="sf-row"><label>status <output data-text="status"></output></label></div>
+        <div class="sf-row"><label>metric <output data-text="views.metricLabel"></output></label></div>
+        <small data-show="views.done">experiment complete — reset to run again</small>
+        <canvas id="metricChart" width="240" height="50"></canvas>
+      </fieldset>
+
+    </div>
+  </details>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

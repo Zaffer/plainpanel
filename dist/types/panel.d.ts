@@ -39,6 +39,8 @@ export declare class Panel {
     slider(label: string, sig: Signal<number>, opts: SliderOptions): this;
     number(label: string, sig: Signal<number>, opts?: Partial<Pick<SliderOptions, 'min' | 'max' | 'step'>>): this;
     text(label: string, sig: Signal<string>): this;
+    /** Native color picker bound to a '#rrggbb' string signal. */
+    color(label: string, sig: Signal<string>): this;
     toggle(label: string, sig: Signal<boolean>): this;
     select(label: string, sig: Signal<string | number>, options: SelectOption[]): this;
     /** Consecutive buttons flow onto one line — native inline layout. */
