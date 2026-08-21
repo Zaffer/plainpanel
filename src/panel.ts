@@ -59,7 +59,6 @@ export class Panel {
     const output = document.createElement('output');
     const input = document.createElement('input');
     input.type = 'range';
-    input.style.userSelect = 'none'; // the control only — label selectability is the app's call
     input.min = String(opts.min);
     input.max = String(opts.max);
     input.step = String(opts.step);

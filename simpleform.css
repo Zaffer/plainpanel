@@ -36,13 +36,6 @@
   width: 100%;
 }
 
-/* Only the control itself opts out of selection; whether surrounding label
-   text is selectable is the app's decision, not the library's. */
-.sf-panel input[type='range'],
-.sf-folder input[type='range'] {
-  user-select: none;
-}
-
 .sf-panel button,
 .sf-folder button {
   font-family: monospace;

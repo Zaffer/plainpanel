@@ -49,8 +49,9 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
   a slider, dragging the slider becomes a drag of the selection (no-drop
   cursor, thumb freezes) until the selection is cleared. A dragstart-cancel
   in bindValue fixed it and was removed on purpose — user-error UX quirks are
-  not worth JS in the library. CSS one-liners are the acceptable ceiling
-  (the slider keeps user-select: none for the highlight tint only).
+  not worth JS in the library. The slider's user-select: none went too:
+  selection behavior belongs entirely to the app. The library never touches
+  selection.
 
 ## Versioning
 

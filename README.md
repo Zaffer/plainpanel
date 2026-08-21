@@ -1,7 +1,7 @@
 # simpleform
 
 Signals-first micro-library for research dashboard controls.
-Real HTML, one store, no build step for consumers. ~600 lines of source, small
+Real HTML, one store, no build step for consumers. ~800 lines of source, small
 enough to read whole.
 
 Three golden rules: **minimal · elegant · simple**.
