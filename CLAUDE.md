@@ -46,6 +46,12 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
   escape hatch; object-valued keys throw because fresh-object identity would
   silently degrade to rebuild-everything.
 
+## Versioning
+
+- Patch bumps by default (0.4.0 → 0.4.1), including for new features. Bump
+  the minor (0.5.0) only for breaking API changes, and only when James asks
+  or confirms. Tag releases (vX.Y.Z) so jsDelivr can pin them.
+
 ## Commands
 
 - `npm test` — build + node --test (must stay green; zero test deps)
