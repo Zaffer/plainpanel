@@ -92,8 +92,6 @@ const FEATURES = [
   { label: '<details name> accordion', ok: 'name' in document.createElement('details') },
   { label: 'CSS anchor positioning', ok: CSS.supports('position-area: center') },
   { label: 'customizable <select>', ok: CSS.supports('appearance', 'base-select') },
-  { label: 'interesttarget', ok: 'interestTargetElement' in HTMLButtonElement.prototype },
-  { label: '<permission> element', ok: typeof window.HTMLPermissionElement !== 'undefined' },
   { label: 'showPicker()', ok: 'showPicker' in HTMLInputElement.prototype },
   { label: 'hidden=until-found', ok: 'onbeforematch' in document.body },
   { label: 'inert', ok: 'inert' in HTMLElement.prototype },
