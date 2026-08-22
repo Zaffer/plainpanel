@@ -1,6 +1,6 @@
 {
   "name": "simpleform",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Signals-first micro-library for research dashboard controls. Real HTML, one store, no build step for consumers.",
   "type": "module",
   "exports": {
@@ -19,7 +19,9 @@
     "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/simpleform.js && tsc -p tsconfig.json",
     "test": "npm run build && node --test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "serve": "python3 -m http.server 8137"
+    "serve": "python3 -m http.server 8137",
+    "socket": "uv run --with fastapi --with uvicorn --with websockets examples/socket/server.py",
+    "types:socket": "npx -y openapi-typescript http://localhost:8780/openapi.json -o examples/socket/api.d.ts"
   },
   "repository": "github:Zaffer/simpleform",
   "license": "MIT",

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>simpleform socket example</title>
+  <link rel="stylesheet" href="../../simpleform.css">
+  <style>
+    body { margin: 0; font-family: monospace; font-size: 13px; background: #111; color: #eee; }
+    main { max-width: 560px; margin: 30px auto; padding: 0 10px; }
+    fieldset { border: 1px solid #444; margin: 8px 0; }
+    label { margin-right: 12px; }
+    output { color: #8fc7ff; }
+    button { font-family: monospace; background: #222; color: #eee; border: 1px solid #555; padding: 3px 10px; cursor: pointer; }
+    button:disabled { color: #666; border-color: #333; cursor: default; }
+    canvas { display: block; background: #000; margin-top: 6px; }
+    #err { color: #f88; min-height: 1.2em; }
+    /* dock the params panel in flow instead of floating */
+    .sf-panel { position: static; background: none; padding: 0; max-height: none; }
+  </style>
+</head>
+<body>
+<main>
+  <h2>socket example</h2>
+  <p>The server is the only source of truth. Server state is shown with
+  <code>data-text</code>/<code>data-disabled</code> — never <code>data-bind</code>.
+  Buttons send commands; the next snapshot updates the screen.
+  Kill the server and restart it to watch the reconnect.</p>
+
+  <fieldset>
+    <legend>link</legend>
+    <label>socket <output data-text="views.linkLabel"></output></label>
+    <label>seq <output data-text="snap.seq"></output></label>
+  </fieldset>
+
+  <fieldset>
+    <legend>rig — server state, display only</legend>
+    <label>battery <output data-text="views.battery"></output></label>
+    <label>ready <output data-text="snap.ready"></output></label>
+    <label>altitude <output data-text="views.altitude"></output></label>
+    <label>metric <output data-text="views.metric"></output></label>
+    <canvas id="chart" width="520" height="60"></canvas>
+  </fieldset>
+
+  <fieldset>
+    <legend>commands — state disables controls, never hides them</legend>
+    <button data-text="views.armLabel" data-on="click:actions.arm" data-disabled="views.armLocked"></button>
+    <button data-on="click:actions.stop" data-disabled="views.stopLocked">stop run</button>
+    <div id="err" data-text="lastError"></div>
+  </fieldset>
+
+  <div id="params"></div>
+</main>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
