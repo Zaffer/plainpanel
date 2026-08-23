@@ -66,7 +66,16 @@ export function connect(url: string | (() => string), opts: SocketOptions): Sock
   let timer: ReturnType<typeof setTimeout> | undefined;
 
   const open = () => {
-    ws = new WebSocket(typeof url === 'function' ? url() : url);
+    try {
+      ws = new WebSocket(typeof url === 'function' ? url() : url);
+    } catch (err) {
+      // A synchronous constructor throw (bad URL, mixed content on https) is
+      // a config error, not a network drop: report once, stop, and leave the
+      // rest of the app running — no retry storm against a URL that can
+      // never work. connected() stays false.
+      console.error('plainpanel: connect() failed —', err);
+      return;
+    }
     ws.onopen = () => isConnected(true);
     ws.onmessage = (e) => batch(() => opts.onMessage(JSON.parse(e.data)));
     ws.onclose = () => {

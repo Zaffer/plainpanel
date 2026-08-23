@@ -11,6 +11,7 @@ import {
   resolveValue,
   resolveTarget,
   series,
+  connect,
 } from '../dist/plainpanel.js';
 
 test('signal: read, write, === short-circuit', () => {
@@ -120,6 +121,22 @@ test('resolveValue: reads through signals mid-path and at the leaf, reactively',
   snapshot({ pose: { x: 2 } });
   assert.deepEqual(seen, [1, 2]);
   stop();
+});
+
+test('connect: a bad URL reports once, does not throw, app keeps running', () => {
+  const errors = [];
+  const realError = console.error;
+  console.error = (...args) => errors.push(args.join(' '));
+  try {
+    const sock = connect('::not a url::', { onMessage: () => {} });
+    assert.equal(sock.connected(), false);
+    assert.equal(sock.send({}), false);
+    sock.close();
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /plainpanel: connect\(\) failed/);
+  } finally {
+    console.error = realError;
+  }
 });
 
 test('series: rolling capacity, gaps, reactive read, clear', () => {

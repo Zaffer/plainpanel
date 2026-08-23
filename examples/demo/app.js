@@ -21,7 +21,9 @@ const snap = signal(/** @type {Snapshot} */ ({
 const metricSeries = series(220);
 const lastError = signal('');
 
-const sock = connect(`ws://${location.host}/api/ws`, {
+// wss on https hosting (GitHub Pages), ws locally
+const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+const sock = connect(`${wsProto}://${location.host}/api/ws`, {
   onMessage: (m) => {
     const s = /** @type {Snapshot} */ (m);
     snap(s);

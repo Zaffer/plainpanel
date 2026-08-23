@@ -1003,7 +1003,12 @@ function connect(url, opts) {
   let closed = false;
   let timer;
   const open = () => {
-    ws = new WebSocket(typeof url === "function" ? url() : url);
+    try {
+      ws = new WebSocket(typeof url === "function" ? url() : url);
+    } catch (err) {
+      console.error("plainpanel: connect() failed \u2014", err);
+      return;
+    }
     ws.onopen = () => isConnected(true);
     ws.onmessage = (e) => batch(() => opts.onMessage(JSON.parse(e.data)));
     ws.onclose = () => {

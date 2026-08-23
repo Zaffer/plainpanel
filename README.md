@@ -6,6 +6,11 @@ enough to read whole.
 
 Three golden rules: **minimal · elegant · simple**.
 
+**[Live demo](https://zaffer.github.io/plainpanel/examples/demo/)** — the 3D
+object, panels, and full control gallery run on static hosting; the experiment
+bar shows "server offline" there (run `npm run server` locally for the full
+server loop).
+
 ## The whole idea in 30 seconds
 
 ```html
