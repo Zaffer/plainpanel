@@ -2,8 +2,8 @@
  * Programmatic panel builder — the second entry point, for quick experiment
  * panels. Generates the same native elements you would write by hand
  * (details/summary, label, output, input) bound with the same primitives the
- * attribute binder uses. No CSS required; the optional simpleform.css theme
- * targets .sf-panel for the polytopy look.
+ * attribute binder uses. No CSS required; the optional plainpanel.css theme
+ * targets .pp-panel for the polytopy look.
  *
  *   const p = panel('Training');
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });

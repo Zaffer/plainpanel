@@ -1,13 +1,13 @@
-# Mock experiment rig for the simpleform socket example.
+# Mock experiment rig for the plainpanel socket example.
 #
 # The server is the only source of truth: it owns all state, validates every
 # command, and pushes a full Snapshot at 10 Hz. The pydantic models below ARE
-# the contract — `npm run types:socket` exports them to api.d.ts for the
+# the contract — `npm run types` exports them to api.d.ts for the
 # frontend's editor typechecking.
 #
 # Run from the repo root (no installs needed, uv fetches deps):
-#   npm run socket
-# then open http://localhost:8780/examples/socket/
+#   npm run server
+# then open http://localhost:8780/examples/demo/
 import asyncio
 import math
 from contextlib import asynccontextmanager
@@ -120,7 +120,7 @@ async def lifespan(_: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title="simpleform mock rig", lifespan=lifespan)
+app = FastAPI(title="plainpanel mock rig", lifespan=lifespan)
 
 
 # ---------- API ----------
@@ -186,7 +186,7 @@ async def ws(sock: WebSocket) -> None:
         pass
 
 
-# Serve the repo so /examples/socket/ and /dist/ share one origin.
+# Serve the repo so /examples/demo/ and /dist/ share one origin.
 app.mount("/", StaticFiles(directory=REPO_ROOT, html=True))
 
 if __name__ == "__main__":

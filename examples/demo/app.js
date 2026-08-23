@@ -1,11 +1,35 @@
+// @ts-check
 // Plain JS, no build step: this file plus the HTML is the whole app.
-// Layout: top bar (experiment), left panel (every HTML control, bound),
-// right panel (the same store via the panel builder), bottom bar
-// (Chromium-only platform features), three.js scene behind everything.
-import { signal, computed, effect, batch, bind, panel, series } from '../../dist/simpleform.js';
+//
+// One example, three ownership domains:
+//   server-owned  — the experiment (snap signal, written only by the socket;
+//                   commands go out as POSTs, the next snapshot updates the UI)
+//   client-owned  — the three.js object params and the control gallery
+//   imperative    — the three.js scene and the canvas chart, behind narrow APIs
+//
+// Types come from the server's pydantic models: npm run types (regenerates
+// api.d.ts from the running server's OpenAPI).
+/** @typedef {import('./api').components['schemas']['Snapshot']} Snapshot */
+import { signal, computed, effect, bind, panel, connect, series } from '../../dist/plainpanel.js';
 import { createStage } from './stage.js';
 
-// ---------- store: the only place state lives ----------
+// ---------- SERVER state: one signal, written only by the socket ----------
+const snap = signal(/** @type {Snapshot} */ ({
+  seq: 0, ready: false, armed: false, running: false,
+  battery: 0, metric: 0, pose: { x: 0, y: 0, z: 0 },
+}));
+const metricSeries = series(220);
+const lastError = signal('');
+
+const sock = connect(`ws://${location.host}/api/ws`, {
+  onMessage: (m) => {
+    const s = /** @type {Snapshot} */ (m);
+    snap(s);
+    metricSeries.push(s.running ? s.metric : null); // null = gap while idle
+  },
+});
+
+// ---------- CLIENT state: the three.js object ----------
 const params = {
   shape: signal('knot'),
   scale: signal(1),
@@ -14,12 +38,6 @@ const params = {
   wireframe: signal(false),
   color: signal('#8fc7ff'),
 };
-const status = signal('idle'); // idle | running | paused | done
-const step = signal(0);
-const metric = signal(1);
-const metricSeries = series(220);
-const stats = signal({ fps: 0, rotationX: 0, rotationY: 0, triangles: 0 });
-const TOTAL_STEPS = 500;
 
 // one signal per gallery control — the point is to watch them all in the JSON
 const g = {
@@ -50,18 +68,32 @@ const g = {
   pinged: signal('never'),
 };
 const ui = { textOpen: signal(true) }; // a <details> open state, in the store
+const stats = signal({ fps: 0, rotationX: 0, rotationY: 0, triangles: 0 });
 
+// ---------- views: readouts + disable logic ----------
 const views = {
+  // three.js object
   scaleLabel: computed(() => params.scale().toFixed(2)),
   spinXLabel: computed(() => params.spinX().toFixed(1)),
   spinYLabel: computed(() => params.spinY().toFixed(1)),
-  running: computed(() => status() === 'running'),
-  done: computed(() => status() === 'done'),
-  runLabel: computed(
-    () => ({ idle: '▶ run', running: '⏸ pause', paused: '▶ resume', done: '▶ run' })[status()],
-  ),
-  metricLabel: computed(() => `${metric().toFixed(4)} @ ${step()}/${TOTAL_STEPS}`),
-  progress: computed(() => step() / TOTAL_STEPS),
+  // experiment (all derived from the snapshot + link state)
+  linkLabel: computed(() => (sock.connected() ? 'live' : 'reconnecting…')),
+  offline: computed(() => !sock.connected()),
+  statusLabel: computed(() => {
+    if (!sock.connected()) return 'offline';
+    if (snap().running) return 'running';
+    return snap().armed ? 'armed' : 'idle';
+  }),
+  running: computed(() => snap().running),
+  armLabel: computed(() => (snap().armed ? 'disarm' : 'arm')),
+  armLocked: computed(() => !sock.connected() || snap().running || (!snap().armed && !snap().ready)),
+  startLocked: computed(() => !sock.connected() || !snap().armed || snap().running),
+  stopLocked: computed(() => !sock.connected() || !snap().running),
+  battery: computed(() => snap().battery.toFixed(2) + ' V'),
+  metricValue: computed(() => snap().metric),
+  metricLabel: computed(() => snap().metric.toFixed(4) + ' @ ' + snap().seq),
+  progress: computed(() => 1 - snap().metric),
+  // gallery + stage
   stats: computed(() => {
     const s = stats();
     return [
@@ -97,39 +129,23 @@ const FEATURES = [
   { label: 'inert', ok: 'inert' in HTMLElement.prototype },
 ];
 
-// ---------- fake experiment loop (stands in for the real one) ----------
-let timer;
-function tick() {
-  batch(() => {
-    step(step() + 1);
-    const m = Math.max(0.001, metric() * (0.97 + Math.random() * 0.04));
-    metric(m);
-    metricSeries.push(m);
-    if (step() >= TOTAL_STEPS) status('done');
-  });
-  if (status() === 'running') timer = setTimeout(tick, 20);
-}
-
-const actions = {
-  run() {
-    if (status() === 'running') {
-      clearTimeout(timer);
-      status('paused');
-      return;
-    }
-    if (status() === 'done') actions.reset();
-    status('running');
-    tick();
-  },
-  reset() {
-    clearTimeout(timer);
-    batch(() => {
-      status('idle');
-      step(0);
-      metric(1);
+// ---------- actions: commands go TO the server; they never write snap ----------
+async function post(path, body) {
+  try {
+    const r = await fetch('/api/' + path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body ?? {}),
     });
-    metricSeries.clear();
-  },
+    const res = await r.json();
+    lastError(res.ok ? '' : res.error);
+  } catch (err) {
+    lastError(String(err));
+  }
+}
+const actions = {
+  arm: () => post(snap().armed ? 'disarm' : 'arm'),
+  stop: () => post('stop'),
   ping() {
     g.pinged(new Date().toLocaleTimeString());
   },
@@ -139,7 +155,7 @@ const actions = {
   },
   openDatePicker() {
     try {
-      document.getElementById('galleryDate').showPicker();
+      /** @type {HTMLInputElement} */ (document.getElementById('galleryDate')).showPicker();
     } catch (err) {
       g.pinged('showPicker refused: ' + err.name);
     }
@@ -156,10 +172,11 @@ effect(() => stage.setColor(params.color()));
 stage.onStats((s) => stats(s)); // ~5 Hz snapshots out of the render loop → one signal write
 
 // ---------- entry point 1: bind the hand-written HTML ----------
-bind(document.body, { params, views, actions, status, metric, g, ui });
+bind(document.body, { params, views, actions, snap, lastError, g, ui });
 
 // ---------- entry point 2: the same store through the panel builder ----------
-const p = panel('controls (panel builder)', { parent: document.getElementById('right') });
+const right = /** @type {Element} */ (document.getElementById('right'));
+const p = panel('controls (panel builder)', { parent: right });
 
 const object = p.folder('object');
 object.select('shape', params.shape, [{ value: 'knot', label: 'torus knot' }, 'box', 'sphere']);
@@ -169,7 +186,7 @@ object.slider('spin y', params.spinY, { min: -3, max: 3, step: 0.1, format: (v) 
 object.toggle('wireframe', params.wireframe);
 object.color('color', params.color);
 
-const mirror = p.folder('gallery mirror (two-way proof)');
+const mirror = p.folder('gallery mirror (two-way proof)', false);
 mirror.text('text', g.text);
 mirror.number('number', g.number, { min: 0, max: 100, step: 1 });
 mirror.slider('range', g.range, { min: 0, max: 1, step: 0.01 });
@@ -178,20 +195,42 @@ mirror.select('radio group', g.radio, ['alpha', 'beta', 'gamma']);
 mirror.select('select', g.select, ['one', 'two', 'three']);
 mirror.readout('last ping', g.pinged);
 
-const experiment = p.folder('experiment');
-experiment.button(views.runLabel, actions.run);
-experiment.button('reset', actions.reset, { disabled: views.running });
-experiment.readout('status', status);
+const experiment = p.folder('experiment (server-owned)');
+experiment.button(views.armLabel, actions.arm, { disabled: views.armLocked });
+experiment.button('stop', actions.stop, { disabled: views.stopLocked });
+experiment.readout('status', views.statusLabel);
 experiment.readout('metric', views.metricLabel);
 
+// ---------- schema-driven form: the server defines it, the panel renders it ----------
+try {
+  const schema = await (await fetch('/api/params')).json();
+  const form = /** @type {Record<string, ReturnType<typeof signal>>} */ ({});
+  const sp = panel('run parameters — schema from the server', { parent: right });
+  for (const param of schema) {
+    const sig = (form[param.name] = signal(param.default));
+    if (param.type === 'float') sp.slider(param.name, sig, { min: param.min, max: param.max, step: param.step });
+    else if (param.type === 'choice') sp.select(param.name, sig, param.options);
+    else if (param.type === 'bool') sp.toggle(param.name, sig);
+    else sp.text(param.name, sig);
+  }
+  sp.button(
+    'start run',
+    () => post('start', Object.fromEntries(Object.entries(form).map(([k, s]) => [k, s()]))),
+    { disabled: views.startLocked },
+  );
+} catch {
+  lastError('no server — run parameters unavailable (npm run server)');
+}
+
 // ---------- canvas sparkline: one effect, same pattern as the 3D stage ----------
-const canvas = document.getElementById('metricChart');
-const ctx = canvas.getContext('2d');
+const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('metricChart'));
+const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
 effect(() => {
   const data = metricSeries.read();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (data.length < 2) return;
-  const finite = data.filter((v) => v !== null);
+  const finite = /** @type {number[]} */ (data.filter((v) => v !== null));
+  if (!finite.length) return;
   const min = Math.min(...finite);
   const max = Math.max(...finite);
   const span = max - min || 1;
@@ -200,7 +239,7 @@ effect(() => {
   let pen = false;
   data.forEach((v, i) => {
     if (v === null) {
-      pen = false; // gap: a dead source draws a hole, not a frozen line
+      pen = false; // gap: idle draws a hole, not a frozen line
       return;
     }
     const x = (i / Math.max(data.length - 1, 1)) * canvas.width;

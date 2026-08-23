@@ -1,4 +1,4 @@
-# simpleform
+# plainpanel
 
 Signals-first micro-library for research dashboard controls.
 Real HTML, one store, no build step for consumers. ~800 lines of source, small
@@ -16,7 +16,7 @@ Three golden rules: **minimal · elegant · simple**.
         data-disabled="views.running"></button>
 
 <script type="module">
-  import { signal, computed, bind } from './dist/simpleform.js';
+  import { signal, computed, bind } from './dist/plainpanel.js';
 
   const params  = { learningRate: signal(0.01) };
   const status  = signal('idle');
@@ -48,18 +48,18 @@ Nothing else reads or writes the DOM.
 
 ## Install
 
-No build step. Either vendor `dist/simpleform.js`, or:
+No build step. Either vendor `dist/plainpanel.js`, or:
 
 ```html
 <script type="module">
-  import { signal, bind } from 'https://cdn.jsdelivr.net/gh/Zaffer/simpleform@main/dist/simpleform.js';
+  import { signal, bind } from 'https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@main/dist/plainpanel.js';
 </script>
 ```
 
 Optional theme (the polytopy look — dark, monospace, translucent panels):
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/simpleform@main/simpleform.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@main/plainpanel.css">
 ```
 
 Skip the CSS entirely and everything still works as bare native controls.
@@ -182,25 +182,35 @@ panel builder are both built from these; custom widgets should be too.
 npm install
 npm run build      # esbuild bundle + type declarations → dist/
 npm test           # build + node --test (zero test deps)
-npm run serve      # static server → open /examples/demo/
+npm run server     # FastAPI mock rig + statics → open http://localhost:8780/examples/demo/
+npm run types      # regenerate examples/demo/api.d.ts from the running server
+npm run serve      # static-only server (no API) → open :8137/examples/demo/
 ```
 
 `dist/` is committed so jsDelivr can serve straight from GitHub.
 
 ## Example
 
-[`examples/demo/`](examples/demo/) is the kitchen sink, no build step: a
-four-panel dashboard (top bar, scrollable left/right panels, bottom bar)
-around a three.js object driven by the store through `stage.js`'s narrow API.
-The left panel binds **every HTML form control** — all text flavors, number,
-range, every date/time picker, color, checkbox, radio group, selects
-(single/optgroup/multiple), datalist combobox, file, buttons, form machinery,
-output/progress/meter — each feeding a live JSON store snapshot. It also
-exercises the native extras (`<details name>` accordions with store-bound open
-state, popover, `<dialog>` via `commandfor`, `inert`, `hidden=until-found`)
-and a bottom bar of Chromium-only features with live support badges
-(customizable `<select>`, anchored popovers, `interesttarget`, `<permission>`,
-`showPicker()`). Degrades gracefully when WebGL is unavailable.
+[`examples/demo/`](examples/demo/) is one dashboard, no build step, three
+ownership domains in one page:
+
+- **server-owned**: a FastAPI mock rig (`server.py`, pydantic contract) pushes
+  a Snapshot at 10 Hz over WebSocket. The top bar projects it — arm/stop
+  buttons send commands, disable logic derives from the snapshot, and the
+  run-parameters panel is rendered from the server's own `/api/params` schema.
+  `api.d.ts` is generated from the server's OpenAPI for editor typechecking.
+  Kill and restart the server to watch the auto-reconnect.
+- **client-owned**: a three.js object driven by the store through `stage.js`'s
+  narrow imperative API, plus a gallery binding **every HTML form control**
+  (all text flavors, number, range, date/time pickers, color, checkbox, radio
+  group, selects, datalist, file, form machinery, output/progress/meter),
+  each feeding a live JSON store snapshot.
+- **native extras**: `<details name>` accordions with store-bound open state,
+  popover, `<dialog>` via `commandfor`, `inert`, `hidden=until-found`, and a
+  bottom bar of Chromium-only features with live support badges.
+
+Degrades gracefully: without WebGL the stage stubs itself out; without the
+server the experiment locks and everything else still works.
 
 ## License
 

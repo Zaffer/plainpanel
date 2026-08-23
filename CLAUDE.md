@@ -1,4 +1,4 @@
-# simpleform — agent notes
+# plainpanel — agent notes
 
 Read README.md first: it is the full API and fits in context. The entire
 source is ~600 lines across six files in src/ — when in doubt, read it all.
@@ -19,7 +19,7 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 - Signals are callables: `s()` reads, `s(v)` writes. Never `.value` (throws).
 - Minimal CSS; prefer native elements/attributes (`details`, `fieldset`,
   `output`, `hidden`, `disabled`) over styled divs.
-- Errors are loud and prefixed `simpleform:` — never fail silently.
+- Errors are loud and prefixed `plainpanel:` — never fail silently.
 - The library never imposes app-level UX policy (selectability, focus,
   scrolling). Native defaults stay; anything beyond the control element
   itself is the app's decision. (James's rule — do not widen user-select
@@ -62,7 +62,7 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 ## Commands
 
 - `npm test` — build + node --test (must stay green; zero test deps)
-- `npm run serve` then open http://localhost:8137/examples/demo/
+- `npm run server` (FastAPI mock rig + statics) then open http://localhost:8780/examples/demo/; `npm run serve` for static-only on :8137
 - Verifying the demo in a headless/WSL browser: WebGL may be unavailable —
   the stage stubs itself out and the dashboard still runs; test 3D visually
   in a real browser.

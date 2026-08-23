@@ -1,7 +1,7 @@
 /* Optional theme: the polytopy look. Dark, monospace, translucent panels.
    Skip this file entirely for bare native controls — everything still works. */
 
-.sf-panel {
+.pp-panel {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -16,28 +16,28 @@
   overflow-y: auto;
 }
 
-.sf-panel summary,
-.sf-folder summary {
+.pp-panel summary,
+.pp-folder summary {
   cursor: pointer;
   user-select: none;
 }
 
-.sf-folder {
+.pp-folder {
   border: 1px solid #444;
   padding: 4px 6px;
   margin: 6px 0;
 }
 
-.sf-row {
+.pp-row {
   margin: 6px 0;
 }
 
-.sf-row input[type='range'] {
+.pp-row input[type='range'] {
   width: 100%;
 }
 
-.sf-panel button,
-.sf-folder button {
+.pp-panel button,
+.pp-folder button {
   font-family: monospace;
   background: #222;
   color: #eee;
@@ -47,14 +47,14 @@
   cursor: pointer;
 }
 
-.sf-panel button:disabled,
-.sf-folder button:disabled {
+.pp-panel button:disabled,
+.pp-folder button:disabled {
   color: #666;
   border-color: #333;
   cursor: default;
 }
 
-.sf-panel output,
-.sf-folder output {
+.pp-panel output,
+.pp-folder output {
   color: #8fc7ff;
 }

@@ -1,5 +1,5 @@
 /**
- * simpleform — signals-first micro-library for research dashboard controls.
+ * plainpanel — signals-first micro-library for research dashboard controls.
  *
  * The invariants (the whole framework, in four sentences):
  *   1. All state lives in one store of signals; the DOM is a projection of it.

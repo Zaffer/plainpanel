@@ -1,29 +1,29 @@
 {
-  "name": "simpleform",
-  "version": "0.4.3",
+  "name": "plainpanel",
+  "version": "0.5.0",
   "description": "Signals-first micro-library for research dashboard controls. Real HTML, one store, no build step for consumers.",
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/simpleform.d.ts",
-      "import": "./dist/simpleform.js"
+      "types": "./dist/plainpanel.d.ts",
+      "import": "./dist/plainpanel.js"
     },
-    "./simpleform.css": "./simpleform.css"
+    "./plainpanel.css": "./plainpanel.css"
   },
-  "types": "./dist/simpleform.d.ts",
+  "types": "./dist/plainpanel.d.ts",
   "files": [
     "dist",
-    "simpleform.css"
+    "plainpanel.css"
   ],
   "scripts": {
-    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/simpleform.js && tsc -p tsconfig.json",
+    "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/plainpanel.js && tsc -p tsconfig.json",
     "test": "npm run build && node --test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "serve": "python3 -m http.server 8137",
-    "socket": "uv run --with fastapi --with uvicorn --with websockets examples/socket/server.py",
-    "types:socket": "npx -y openapi-typescript http://localhost:8780/openapi.json -o examples/socket/api.d.ts"
+    "server": "uv run --with fastapi --with uvicorn --with websockets examples/demo/server.py",
+    "types": "npx -y openapi-typescript http://localhost:8780/openapi.json -o examples/demo/api.d.ts"
   },
-  "repository": "github:Zaffer/simpleform",
+  "repository": "github:Zaffer/plainpanel",
   "license": "MIT",
   "author": "James Wiles (https://github.com/Zaffer)",
   "sideEffects": false,

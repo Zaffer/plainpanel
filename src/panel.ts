@@ -2,8 +2,8 @@
  * Programmatic panel builder — the second entry point, for quick experiment
  * panels. Generates the same native elements you would write by hand
  * (details/summary, label, output, input) bound with the same primitives the
- * attribute binder uses. No CSS required; the optional simpleform.css theme
- * targets .sf-panel for the polytopy look.
+ * attribute binder uses. No CSS required; the optional plainpanel.css theme
+ * targets .pp-panel for the polytopy look.
  *
  *   const p = panel('Training');
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });
@@ -45,12 +45,12 @@ export class Panel {
 
   constructor(title: string, open: boolean) {
     this.el = document.createElement('details');
-    this.el.className = 'sf-panel';
+    this.el.className = 'pp-panel';
     this.el.open = open;
     const summary = document.createElement('summary');
     summary.textContent = title;
     this.body = document.createElement('div');
-    this.body.className = 'sf-body';
+    this.body.className = 'pp-body';
     this.el.append(summary, this.body);
   }
 
@@ -152,7 +152,7 @@ export class Panel {
   /** Nested collapsible group. Disposed with its parent. */
   folder(title: string, open = true): Panel {
     const child = new Panel(title, open);
-    child.el.classList.replace('sf-panel', 'sf-folder');
+    child.el.classList.replace('pp-panel', 'pp-folder');
     this.body.appendChild(child.el);
     this.folders.push(child);
     return child;
@@ -167,7 +167,7 @@ export class Panel {
 
   private row(label: string): { row: HTMLDivElement; labelEl: HTMLLabelElement } {
     const row = document.createElement('div');
-    row.className = 'sf-row';
+    row.className = 'pp-row';
     const labelEl = document.createElement('label');
     if (label) labelEl.append(label);
     row.appendChild(labelEl);

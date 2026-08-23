@@ -11,7 +11,7 @@ import {
   resolveValue,
   resolveTarget,
   series,
-} from '../dist/simpleform.js';
+} from '../dist/plainpanel.js';
 
 test('signal: read, write, === short-circuit', () => {
   const s = signal(1);

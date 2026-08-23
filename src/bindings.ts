@@ -88,7 +88,7 @@ export function bindValue(el: ValueElement | HTMLDetailsElement, sig: Signal<any
     stop = effect(() => {
       const selected = sig();
       if (!Array.isArray(selected)) {
-        throw new Error('simpleform: a select[multiple] binding needs a signal holding an array');
+        throw new Error('plainpanel: a select[multiple] binding needs a signal holding an array');
       }
       for (const option of el.options) option.selected = selected.includes(option.value);
     });

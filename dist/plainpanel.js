@@ -627,7 +627,7 @@ function bindValue(el, sig) {
     stop = effect2(() => {
       const selected = sig();
       if (!Array.isArray(selected)) {
-        throw new Error("simpleform: a select[multiple] binding needs a signal holding an array");
+        throw new Error("plainpanel: a select[multiple] binding needs a signal holding an array");
       }
       for (const option of el.options) option.selected = selected.includes(option.value);
     });
@@ -685,7 +685,7 @@ function walk(scope, path) {
   for (const key of path.split(".")) {
     if (isReadable(current)) current = current();
     if (current == null || !(key in Object(current))) {
-      throw new Error(`simpleform: path "${path}" not found in scope (stopped at "${key}")`);
+      throw new Error(`plainpanel: path "${path}" not found in scope (stopped at "${key}")`);
     }
     current = current[key];
   }
@@ -695,7 +695,7 @@ function resolveValue(scope, path) {
   const v = walk(scope, path);
   if (isReadable(v)) return v();
   if (typeof v === "function") {
-    throw new Error(`simpleform: path "${path}" resolves to a plain function \u2014 bindable values must be signal(), computed(), or plain data`);
+    throw new Error(`plainpanel: path "${path}" resolves to a plain function \u2014 bindable values must be signal(), computed(), or plain data`);
   }
   return v;
 }
@@ -712,7 +712,7 @@ function bind(root, scope) {
   const writable = (path, attr) => {
     const leaf = untracked(() => resolveTarget(scope, path));
     if (!(typeof leaf === "function" && isSignal(leaf))) {
-      throw new Error(`simpleform: ${attr}="${path}" must point to a signal(), got ${typeof leaf}`);
+      throw new Error(`plainpanel: ${attr}="${path}" must point to a signal(), got ${typeof leaf}`);
     }
     return ((...args) => {
       const target = resolveTarget(scope, path);
@@ -722,7 +722,7 @@ function bind(root, scope) {
   const handler = (path) => {
     const leaf = untracked(() => resolveTarget(scope, path));
     if (typeof leaf !== "function" || isReadable(leaf)) {
-      throw new Error(`simpleform: data-on handler "${path}" is not a function`);
+      throw new Error(`plainpanel: data-on handler "${path}" is not a function`);
     }
     return (e) => resolveTarget(scope, path)(e);
   };
@@ -733,7 +733,7 @@ function bind(root, scope) {
     const d = el.dataset;
     if (d.each !== void 0) {
       if (!(el instanceof HTMLTemplateElement)) {
-        throw new Error(`simpleform: data-each="${d.each}" only works on <template> elements`);
+        throw new Error(`plainpanel: data-each="${d.each}" only works on <template> elements`);
       }
       stops.push(bindEach(el, scope));
       continue;
@@ -756,7 +756,7 @@ function bind(root, scope) {
     if (d.on !== void 0) {
       for (const pair of d.on.trim().split(/\s+/)) {
         const i = pair.indexOf(":");
-        if (i < 1) throw new Error(`simpleform: data-on="${pair}" must be "event:path"`);
+        if (i < 1) throw new Error(`plainpanel: data-on="${pair}" must be "event:path"`);
         stops.push(listen(el, pair.slice(0, i), handler(pair.slice(i + 1))));
       }
     }
@@ -770,7 +770,7 @@ function bindEach(tpl, scope) {
   const keyPath = (tpl.dataset.key ?? "").trim();
   if (!keyPath) {
     throw new Error(
-      `simpleform: data-each="${path}" requires data-key \u2014 a unique item field like data-key="id", data-key="$item" for primitive items, or data-key="$index" for explicitly positional rows`
+      `plainpanel: data-each="${path}" requires data-key \u2014 a unique item field like data-key="id", data-key="$item" for primitive items, or data-key="$index" for explicitly positional rows`
     );
   }
   const keyOf = (item, index) => {
@@ -779,7 +779,7 @@ function bindEach(tpl, scope) {
     if (isReadable(key)) key = key();
     if (typeof key === "object" && key !== null) {
       throw new Error(
-        `simpleform: data-key="${keyPath}" produced an object \u2014 keys must be primitive (fresh objects would defeat tracking); key by a field instead`
+        `plainpanel: data-key="${keyPath}" produced an object \u2014 keys must be primitive (fresh objects would defeat tracking); key by a field instead`
       );
     }
     return key;
@@ -792,7 +792,7 @@ function bindEach(tpl, scope) {
   const stopEffect = effect2(() => {
     const items = resolveValue(scope, path);
     if (!Array.isArray(items)) {
-      throw new Error(`simpleform: data-each="${path}" must read an array, got ${typeof items}`);
+      throw new Error(`plainpanel: data-each="${path}" must read an array, got ${typeof items}`);
     }
     untracked(() => {
       const next = /* @__PURE__ */ new Map();
@@ -800,7 +800,7 @@ function bindEach(tpl, scope) {
       items.forEach((itemValue, i) => {
         const key = keyOf(itemValue, i);
         if (next.has(key)) {
-          throw new Error(`simpleform: duplicate data-key value "${String(key)}" in data-each="${path}"`);
+          throw new Error(`plainpanel: duplicate data-key value "${String(key)}" in data-each="${path}"`);
         }
         let row = rows.get(key);
         if (row) {
@@ -851,12 +851,12 @@ var Panel = class _Panel {
   folders = [];
   constructor(title, open) {
     this.el = document.createElement("details");
-    this.el.className = "sf-panel";
+    this.el.className = "pp-panel";
     this.el.open = open;
     const summary = document.createElement("summary");
     summary.textContent = title;
     this.body = document.createElement("div");
-    this.body.className = "sf-body";
+    this.body.className = "pp-body";
     this.el.append(summary, this.body);
   }
   slider(label, sig, opts) {
@@ -947,7 +947,7 @@ var Panel = class _Panel {
   /** Nested collapsible group. Disposed with its parent. */
   folder(title, open = true) {
     const child = new _Panel(title, open);
-    child.el.classList.replace("sf-panel", "sf-folder");
+    child.el.classList.replace("pp-panel", "pp-folder");
     this.body.appendChild(child.el);
     this.folders.push(child);
     return child;
@@ -960,7 +960,7 @@ var Panel = class _Panel {
   }
   row(label) {
     const row = document.createElement("div");
-    row.className = "sf-row";
+    row.className = "pp-row";
     const labelEl = document.createElement("label");
     if (label) labelEl.append(label);
     row.appendChild(labelEl);
