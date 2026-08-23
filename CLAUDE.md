@@ -22,8 +22,7 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
 - Errors are loud and prefixed `plainpanel:` — never fail silently.
 - The library never imposes app-level UX policy (selectability, focus,
   scrolling). Native defaults stay; anything beyond the control element
-  itself is the app's decision. (James's rule — do not widen user-select
-  back to panels.)
+  itself is the app's decision.
 - Keep the library small. A feature that can live in an example instead of
   src/ lives in an example.
 
@@ -45,19 +44,12 @@ source is ~600 lines across six files in src/ — when in doubt, read it all.
   attribute is a loud bind-time error. "$index" is the explicit positional
   escape hatch; object-valued keys throw because fresh-object identity would
   silently degrade to rebuild-everything.
-- Accepted quirk, do NOT "fix" (James, 2026-08-21): if a text selection spans
-  a slider, dragging the slider becomes a drag of the selection (no-drop
-  cursor, thumb freezes) until the selection is cleared. A dragstart-cancel
-  in bindValue fixed it and was removed on purpose — user-error UX quirks are
-  not worth JS in the library. The slider's user-select: none went too:
-  selection behavior belongs entirely to the app. The library never touches
-  selection.
 
 ## Versioning
 
 - Patch bumps by default (0.4.0 → 0.4.1), including for new features. Bump
-  the minor (0.5.0) only for breaking API changes, and only when James asks
-  or confirms. Tag releases (vX.Y.Z) so jsDelivr can pin them.
+  the minor (0.5.0) only for breaking API changes. Tag releases (vX.Y.Z) 
+  so jsDelivr can pin them.
 
 ## Commands
 

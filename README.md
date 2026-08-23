@@ -1,59 +1,38 @@
 # plainpanel
 
-Signals-first micro-library for research dashboard controls.
-Real HTML, one store, no build step for consumers. ~800 lines of source, small
-enough to read whole.
+A small signals library for dashboard control panels.
+Plain HTML, one store, no build step. ~800 lines of source.
 
-Three golden rules: **minimal · elegant · simple**.
+**Live demo - https://zaffer.github.io/plainpanel/examples/demo/**.
+Run `npm run server` on your machine, and go http://localhost:8780/examples/demo/ for full version.
 
-**[Live demo](https://zaffer.github.io/plainpanel/examples/demo/)** — the 3D
-object, panels, and full control gallery run on static hosting; the experiment
-bar shows "server offline" there (run `npm run server` locally for the full
-server loop).
-
-## The whole idea in 30 seconds
+## The idea
 
 ```html
-<label>learning rate <output data-text="views.lrLabel"></output><br>
-  <input type="range" min="0.001" max="0.1" step="0.001"
-         data-bind="params.learningRate" data-wheel></label>
-<button data-text="views.trainLabel" data-on="click:actions.train"
-        data-disabled="views.running"></button>
+<label>volume slider
+  <output data-text="views.label"></output><br>
+  <input type="range" min="0" max="100" data-bind="state.volume">
+</label>
+<button data-on="click:actions.reset">reset</button>
 
 <script type="module">
   import { signal, computed, bind } from './dist/plainpanel.js';
 
-  const params  = { learningRate: signal(0.01) };
-  const status  = signal('idle');
-  const views   = {
-    lrLabel:    computed(() => params.learningRate().toFixed(3)),
-    running:    computed(() => status() === 'running'),
-    trainLabel: computed(() => status() === 'running' ? 'pause' : 'train'),
-  };
-  const actions = { train: () => status(status() === 'running' ? 'paused' : 'running') };
+  const state   = { volume: signal(40) };
+  const views   = { label: computed(() => state.volume() + ' %') };
+  const actions = { reset: () => state.volume(40) };
 
-  bind(document.body, { params, views, actions });
+  bind(document.body, { state, views, actions });
 </script>
 ```
 
-State lives in signals. The HTML declares which node projects which path.
-`bind()` wires them: one effect per DOM property, one listener per control.
-Nothing else reads or writes the DOM.
-
-## The invariants
-
-1. **All state lives in one store of signals; the DOM is a projection of it.**
-   Nothing reads a DOM node except the binder.
-2. **Attributes hold dot-paths into the store, never expressions.**
-   Anything computed is a named `computed()` in the store. Unknown paths throw
-   at bind time.
-3. **Events feed the store at the edge; each event is one batched write.**
-4. **Imperative surfaces (three.js, canvas) sit behind a narrow API** and
-   receive data via effects. Never put a foreign object's internals in signals.
+State lives in signals. The HTML says which path each node shows.
+`bind()` connects them: one effect for each DOM property, one listener for
+each control. Nothing else reads or writes the DOM.
 
 ## Install
 
-No build step. Either vendor `dist/plainpanel.js`, or:
+No build step. Copy `dist/plainpanel.js` into your project, or:
 
 ```html
 <script type="module">
@@ -61,85 +40,87 @@ No build step. Either vendor `dist/plainpanel.js`, or:
 </script>
 ```
 
-Optional theme (the polytopy look — dark, monospace, translucent panels):
+Optional theme (dark, monospace, translucence):
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@main/plainpanel.css">
 ```
 
-Skip the CSS entirely and everything still works as bare native controls.
-
 ## Signals
 
-Signals are callables: read with `s()`, write with `s(next)`. They are frozen —
-`s.value = x` throws instead of failing silently.
+A signal is a function. Read with `s()`. Write with `s(next)`. Signals are
+frozen: `s.value = x` throws an error.
 
 ```js
 const count  = signal(1);            // read: count()   write: count(2)
 const double = computed(() => count() * 2);
-const stop   = effect(() => {        // runs now + on any change of what it read
+const stop   = effect(() => {        // runs now, and again when a read value changes
   render(double());
-  return () => cleanup();            // optional; runs before re-run and on stop
+  return () => cleanup();            // optional; runs before each re-run and on stop
 });
 batch(() => { a(1); b(2); });        // effects run once, after both writes
-untracked(() => s());                // read without subscribing
-trigger(s);                          // notify after mutating s() in place
-effectScope(() => { ... });          // group effects; returned Stop kills all
+untracked(() => s());                // read without a subscription
+trigger(s);                          // notify effects after an in-place change of s()
+effectScope(() => { ... });          // group effects; the returned Stop stops all
 ```
 
-Rules of thumb: replace values immutably (`list([...list(), x])`); the only
-in-place mutation lives inside `series()`, which triggers for you. Writes of an
-identical value (`===`) are no-ops — echo loops cannot happen.
+Rules:
+
+- Replace values, do not mutate them: `list([...list(), x])`. Only `series()`
+  mutates in place, and it notifies for you.
+- A write of an identical value (`===`) does nothing. Echo loops cannot happen.
 
 ## bind(root, scope)
 
-Scans `root` for `data-*` attributes, wires them against `scope`, returns a
-`Stop` that tears everything down.
+`bind()` scans `root` for `data-*` attributes and connects them to `scope`.
+It returns a `Stop` that removes all bindings.
 
 | Attribute | On | Does |
 |---|---|---|
 | `data-text="path"` | any element | `textContent` ← value |
-| `data-bind="path"` | input/select/textarea/details | two-way ⇄ **signal** (typed: number/boolean/string by the signal's current value; NaN never written). Checkbox → boolean; radio group → one signal, checked by value; `select[multiple]` → string[]; `type=file` → one-way DOM→signal (File[]); `<details>` → open ⇄ boolean; `<progress>`/`<meter>` → one-way value ← readable (computeds welcome) |
+| `data-bind="path"` | input/select/textarea/details | two-way ⇄ **signal**. The signal's current value sets the type (number/boolean/string); NaN is never written. Checkbox → boolean; radio group → one signal, checked by value; `select[multiple]` → string[]; `type=file` → one-way DOM→signal (File[]); `<details>` → open ⇄ boolean; `<progress>`/`<meter>` → one-way value ← readable (computeds welcome) |
 | `data-show="path"` | any element | native `hidden` ← `!value` |
-| `data-disabled="path"` | button/input/… | `disabled` ← value — state disables controls, it never hides or moves them |
-| `data-inert="path"` | any element | native `inert` ← value — whole-subtree disable (focus, clicks, a11y) |
-| `data-on="click:path"` | any element | listener → function in scope (space-separate multiple `event:path` pairs) |
-| `data-wheel` | range/number with `data-bind` | mouse wheel nudges by `step` |
-| `data-each="path"` | `<template>` | one row per array item; rows see `$item` / `$index` plus outer scope. **Requires `data-key`.** Reconciled by key: content changes update rows **in place** (zero DOM mutation); a kept item at a new position moves its DOM nodes with it, so focus and canvas state travel with the item |
-| `data-key="id"` | `<template>` with `data-each` | item identity: a field path into the item (`"id"`), `"$item"` for primitive values, or `"$index"` for explicitly positional rows. Duplicate or object keys throw |
+| `data-disabled="path"` | button/input/… | `disabled` ← value. State disables controls; it never hides or moves them |
+| `data-inert="path"` | any element | native `inert` ← value. Disables the full subtree (focus, clicks, a11y) |
+| `data-on="click:path"` | any element | listener → function in scope. Separate multiple `event:path` pairs with spaces |
+| `data-wheel` | range/number with `data-bind` | the mouse wheel changes the value by `step` |
+| `data-each="path"` | `<template>` | one row for each array item. Rows see `$item` / `$index` and the outer scope. **`data-key` is required.** Rows reconcile by key: a content change updates the row **in place** (zero DOM mutation); a kept item at a new position moves its DOM nodes with it, so focus and canvas state travel with the item |
+| `data-key="id"` | `<template>` with `data-each` | item identity: a field path into the item (`"id"`), `"$item"` for primitive values, or `"$index"` for positional rows. Duplicate or object keys throw |
 
-Paths are dot-walked (`params.learningRate`), prototype chain included. A miss
-throws with the full path. No expressions, ever.
+Paths are dot-walked (`state.volume`); the prototype chain is included. A
+missing path throws an error that shows the full path. No expressions, ever.
 
-**Paths read through signals.** A segment holding a signal or computed is read
-(reactively) and the walk continues into its value: `data-text="snapshot.pose.x"`
-works when `snapshot` is one signal holding the latest server state, and
-`$item.size` stays live when a row's item is updated in place.
+**Paths read through signals.** When a path segment holds a signal or a
+computed, the binder reads it (reactively) and continues into its value.
+`data-text="snapshot.pose.x"` works when `snapshot` is one signal that holds
+the latest server state, and `$item.size` stays live when a row's item is
+updated in place.
 
-**Browser rule — sliders and fieldsets.** Chrome silently cancels an
-in-progress native slider drag when the child list of the slider's `<fieldset>`
-changes (pure-vanilla behavior, any framework triggers it). `data-each` only
-mutates structure when the array length changes, but still: put `data-each`
-templates in their own container, never beside the controls that drive them.
+**Browser rule — sliders and fieldsets.** Chrome cancels a slider drag when
+the child list of the slider's `<fieldset>` changes. This is native browser
+behavior; every framework triggers it. `data-each` changes structure only
+when the array length changes. Still: put `data-each` templates in their own
+container, never next to the controls that drive them.
 
 ## panel(title, opts?)
 
-Programmatic panels for quick experiments — generates the same native elements
-you'd write by hand, in a `<details>` appended to `opts.parent ?? document.body`.
+Build panels from code, for quick experiments. The output is the same native
+elements you write by hand, in a `<details>` appended to
+`opts.parent ?? document.body`.
 
 ```js
-const p = panel('Training');
-p.slider('learning rate', params.lr, { min: 0.001, max: 0.1, step: 0.001, format: v => v.toFixed(3) });
-p.number('epochs', params.epochs, { min: 10, max: 1000, step: 10 });
-p.toggle('show lines', vis.lines);
-p.select('pattern', params.pattern, ['spiral', 'xor', { value: 'rnd', label: 'random' }]);
-p.button(views.trainLabel, actions.train, { disabled: views.running }); // label may be a computed
-p.readout('loss', views.lossLabel);
-p.text('run name', params.runName);
-p.color('trace color', params.traceColor);
+const p = panel('settings');
+p.slider('speed', state.speed, { min: 0, max: 5, step: 0.1, format: v => v.toFixed(1) });
+p.number('count', state.count, { min: 0, max: 100, step: 1 });
+p.toggle('show grid', state.grid);
+p.select('mode', state.mode, ['auto', 'manual', { value: 'off', label: 'disabled' }]);
+p.button(views.runLabel, actions.run, { disabled: views.running }); // label may be a computed
+p.readout('status', views.statusLabel);
+p.text('name', state.name);
+p.color('trace color', state.color);
 p.add(myCanvas);                       // escape hatch: any element
 const f = p.folder('advanced');        // nested collapsible group
-p.dispose();                           // stops every binding, removes the panel
+p.dispose();                           // stops all bindings, removes the panel
 ```
 
 Sliders get a live `<output>` readout and wheel support by default.
@@ -147,24 +128,25 @@ Sliders get a live `<output>` readout and wheel support by default.
 ## Edge helpers
 
 ```js
-const loss = series(600);   // rolling buffer; push(null) marks a gap
-loss.push(0.42);
-effect(() => draw(loss.read()));   // read() is reactive — redraws per push
+const metric = series(600);   // rolling buffer; push(null) marks a gap
+metric.push(0.42);
+effect(() => draw(metric.read()));   // read() is reactive — redraws on each push
 
 const sock = connect(() => `ws://localhost:8780/api/ws?since=${lastSeq()}`, {
   onMessage: (snap) => applySnapshot(snap),   // already JSON.parsed, inside batch()
-  reconnectMs: 1000,                          // infinite retry until sock.close()
+  reconnectMs: 1000,                          // retries forever, until sock.close()
 });
 sock.connected();   // computed<boolean>
 sock.send({ cmd: 'arm' });
 ```
 
-For native browser Observables (Chromium 135+), just feed the store:
+Native browser Observables fit the same way, just feed the store:
 `button.when('click').subscribe(() => status('armed'))`.
 
 ## Imperative escape hatch (three.js, canvas)
 
-Keep foreign libraries in plain modules behind a narrow API; effects push data in:
+Keep foreign libraries in plain modules, behind a narrow API. Effects push
+data in:
 
 ```js
 // stage.js — no signals in here
@@ -178,8 +160,8 @@ effect(() => stage.setPose(snapshot().pose));   // data in, never proxied
 ## Low-level primitives
 
 `bindText` `bindShow` `bindDisabled` `bindValue` `bindWheel` `listen` — each
-creates one effect or one listener and returns a `Stop`. The binder and the
-panel builder are both built from these; custom widgets should be too.
+one creates one effect or one listener and returns a `Stop`. The binder and
+the panel builder are built from these. Build custom widgets from them too.
 
 ## Development
 
@@ -192,31 +174,10 @@ npm run types      # regenerate examples/demo/api.d.ts from the running server
 npm run serve      # static-only server (no API) → open :8137/examples/demo/
 ```
 
-`dist/` is committed so jsDelivr can serve straight from GitHub.
+`dist/` is committed, so jsDelivr can serve it directly from GitHub.
 
 ## Example
 
-[`examples/demo/`](examples/demo/) is one dashboard, no build step, three
-ownership domains in one page:
-
-- **server-owned**: a FastAPI mock rig (`server.py`, pydantic contract) pushes
-  a Snapshot at 10 Hz over WebSocket. The top bar projects it — arm/stop
-  buttons send commands, disable logic derives from the snapshot, and the
-  run-parameters panel is rendered from the server's own `/api/params` schema.
-  `api.d.ts` is generated from the server's OpenAPI for editor typechecking.
-  Kill and restart the server to watch the auto-reconnect.
-- **client-owned**: a three.js object driven by the store through `stage.js`'s
-  narrow imperative API, plus a gallery binding **every HTML form control**
-  (all text flavors, number, range, date/time pickers, color, checkbox, radio
-  group, selects, datalist, file, form machinery, output/progress/meter),
-  each feeding a live JSON store snapshot.
-- **native extras**: `<details name>` accordions with store-bound open state,
-  popover, `<dialog>` via `commandfor`, `inert`, `hidden=until-found`, and a
-  bottom bar of Chromium-only features with live support badges.
-
-Degrades gracefully: without WebGL the stage stubs itself out; without the
-server the experiment locks and everything else still works.
-
-## License
-
-MIT
+[`examples/demo/`](examples/demo/) is one dashboard with no build step. It
+shows three ownership domains on one page: a server-owned experiment, a
+client-owned control gallery, and imperative escape hatches.
