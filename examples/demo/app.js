@@ -69,7 +69,13 @@ const g = {
   inertDemo: signal(5),
   pinged: signal('never'),
 };
-const ui = { textOpen: signal(true) }; // a <details> open state, in the store
+const ui = {
+  textOpen: signal(true), // a <details> open state, in the store
+  theme: signal('dark'),
+  noCss: signal(false), // disables every author stylesheet — raw HTML remains
+};
+// panel geometry — effects project these into CSS variables below
+const layout = { leftW: signal(320), rightW: signal(280), bottomH: signal(200) };
 const stats = signal({ fps: 0, rotationX: 0, rotationY: 0, triangles: 0 });
 
 // ---------- views: readouts + disable logic ----------
@@ -116,6 +122,7 @@ const views = {
     return JSON.stringify(snapshot, null, 1);
   }),
   features: computed(() => FEATURES.map((f) => ({ label: f.label, value: f.ok ? '✓' : '✗' }))),
+  themeLabel: computed(() => (ui.theme() === 'dark' ? '☾ dark mode' : '☀ light mode')),
 };
 
 // feature detection for the bottom bar (static — computed for uniformity)
@@ -162,7 +169,30 @@ const actions = {
       g.pinged('showPicker refused: ' + err.name);
     }
   },
+  toggleTheme: () => ui.theme(ui.theme() === 'dark' ? 'light' : 'dark'),
+  // panel resizing: pointer capture keeps move/up on the handle itself,
+  // so three listeners per handle cover the whole gesture. One write per move.
+  rzDown(e) {
+    const el = /** @type {HTMLElement} */ (e.currentTarget);
+    const p = /** @type {PointerEvent} */ (e);
+    el.setPointerCapture(p.pointerId);
+    const sig = { left: layout.leftW, right: layout.rightW, bottom: layout.bottomH }[el.dataset.rz];
+    drag = { which: el.dataset.rz, x: p.clientX, y: p.clientY, from: sig() };
+    e.preventDefault();
+  },
+  rzMove(e) {
+    if (!drag) return;
+    const p = /** @type {PointerEvent} */ (e);
+    if (drag.which === 'left') layout.leftW(clamp(drag.from + p.clientX - drag.x, 180, window.innerWidth * 0.45));
+    else if (drag.which === 'right') layout.rightW(clamp(drag.from - (p.clientX - drag.x), 180, window.innerWidth * 0.45));
+    else layout.bottomH(clamp(drag.from - (p.clientY - drag.y), 64, window.innerHeight * 0.6));
+  },
+  rzUp() {
+    drag = null;
+  },
 };
+let drag = null; // transient gesture state, not app state — nothing renders from it
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // ---------- three.js: imperative escape hatch, data flows in via effects ----------
 const stage = createStage(document.getElementById('scene'));
@@ -172,6 +202,22 @@ effect(() => stage.setSpin(params.spinX(), params.spinY()));
 effect(() => stage.setWireframe(params.wireframe()));
 effect(() => stage.setColor(params.color()));
 stage.onStats((s) => stats(s)); // ~5 Hz snapshots out of the render loop → one signal write
+
+// ---------- layout & chrome: the same pattern — effects push store values out ----------
+const rootStyle = document.documentElement.style;
+effect(() => rootStyle.setProperty('--left-w', layout.leftW() + 'px'));
+effect(() => rootStyle.setProperty('--right-w', layout.rightW() + 'px'));
+effect(() => rootStyle.setProperty('--bottom-h', layout.bottomH() + 'px'));
+effect(() => {
+  document.documentElement.dataset.theme = ui.theme();
+});
+effect(() => stage.setBackground(ui.theme() === 'light' ? '#e9edf2' : '#0d1017'));
+effect(() => {
+  const off = ui.noCss(); // "no CSS": the same HTML, zero styling
+  for (const el of document.querySelectorAll('link[rel=stylesheet], style')) {
+    /** @type {HTMLLinkElement} */ (el).disabled = off;
+  }
+});
 
 // ---------- entry point 1: bind the hand-written HTML ----------
 bind(document.body, { params, views, actions, snap, lastError, g, ui });
@@ -228,6 +274,7 @@ try {
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('metricChart'));
 const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext('2d'));
 effect(() => {
+  const stroke = ui.theme() === 'light' ? '#1f6fd6' : '#8fc7ff'; // read first: redraw on theme flip
   const data = metricSeries.read();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (data.length < 2) return;
@@ -236,7 +283,7 @@ effect(() => {
   const min = Math.min(...finite);
   const max = Math.max(...finite);
   const span = max - min || 1;
-  ctx.strokeStyle = '#8fc7ff';
+  ctx.strokeStyle = stroke;
   ctx.beginPath();
   let pen = false;
   data.forEach((v, i) => {

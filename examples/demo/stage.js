@@ -13,7 +13,7 @@ export function createStage(canvas) {
     console.warn('stage: WebGL unavailable, running without 3D —', err.message);
     canvas.remove();
     const noop = () => {};
-    return { setShape: noop, setScale: noop, setSpin: noop, setWireframe: noop, setColor: noop, onStats: noop, dispose: noop };
+    return { setShape: noop, setScale: noop, setSpin: noop, setWireframe: noop, setColor: noop, setBackground: noop, onStats: noop, dispose: noop };
   }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
@@ -95,6 +95,9 @@ export function createStage(canvas) {
     },
     setColor(hex) {
       material.color.set(hex);
+    },
+    setBackground(hex) {
+      scene.background.set(hex);
     },
     onStats(fn) {
       statsListener = fn;

@@ -4,70 +4,25 @@
   <meta charset="utf-8">
   <title>plainpanel demo</title>
   <link rel="stylesheet" href="../../plainpanel.css">
-  <style>
-    /* Layout is app policy, so it all lives here, not in the library. */
-    body { margin: 0; overflow: hidden; font-family: monospace; font-size: 12px; background: #111; color: #eee; }
-    #scene { position: fixed; inset: 0; display: block; }
-
-    #top {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-      padding: 6px 10px; background: rgba(0, 0, 0, 0.85);
-    }
-    #left, #right {
-      position: fixed; top: 46px; bottom: 205px; z-index: 1000;
-      width: 320px; overflow-y: auto;
-      background: rgba(0, 0, 0, 0.85); padding: 8px;
-    }
-    #left { left: 0; }
-    #right { right: 0; width: 280px; }
-    #bottom {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
-      height: 195px; overflow: auto;
-      display: flex; gap: 10px; align-items: flex-start;
-      padding: 8px 10px; background: rgba(0, 0, 0, 0.85);
-    }
-    #bottom > fieldset { flex: 0 0 auto; max-height: 175px; overflow-y: auto; }
-
-    /* The builder panel docks inside #right instead of floating. */
-    #right .pp-panel { position: static; min-width: 0; max-height: none; padding: 0; background: none; }
-
-    fieldset { border: 1px solid #444; margin: 6px 0; min-width: 0; }
-    details.group { border: 1px solid #333; padding: 2px 6px; margin: 4px 0; }
-    details.group > summary { cursor: pointer; }
-    .pp-row { margin: 6px 0; }
-    input[type='range'] { width: 100%; }
-    button { font-family: monospace; background: #222; color: #eee; border: 1px solid #555; padding: 3px 8px; cursor: pointer; }
-    button:disabled { color: #666; border-color: #333; cursor: default; }
-    output { color: #8fc7ff; }
-    #metricChart { display: block; background: #000; }
-    pre { white-space: pre-wrap; word-break: break-all; color: #9c9; margin: 4px 0; }
-    dialog { background: #222; color: #eee; font-family: monospace; border: 1px solid #666; }
-    dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-    [popover] { background: #222; color: #eee; font-family: monospace; border: 1px solid #666; padding: 8px; }
-    .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; }
-    small { color: #999; }
-    #err { color: #f88; }
-
-    /* Chromium-only: customizable select + anchored popover (harmless elsewhere) */
-    select.fancy, select.fancy::picker(select) { appearance: base-select; }
-    select.fancy { background: #222; color: #eee; border: 1px solid #555; }
-    select.fancy::picker(select) { background: #222; color: #eee; border: 1px solid #666; }
-    #anchorBtn { anchor-name: --demo-anchor; }
-    #anchoredPop { position: absolute; position-anchor: --demo-anchor; position-area: top; margin: 4px; }
-  </style>
+  <!-- Layout is app policy, so it lives with the example, not in the library. -->
+  <link rel="stylesheet" href="./demo.css">
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
   </script>
 </head>
 <body>
 
-  <canvas id="scene"></canvas>
-
   <!-- ═══ TOP BAR: the experiment. Server-owned state: data-text/data-disabled
        project the snapshot; buttons send commands; the next snapshot updates
        the screen. Nothing here writes local state. ═══ -->
   <header id="top">
+    <nav id="menu">
+      <button popovertarget="menuPop" title="menu">☰</button>
+      <div popover id="menuPop">
+        <button data-on="click:actions.toggleTheme" data-text="views.themeLabel"></button>
+        <label><input type="checkbox" data-bind="ui.noCss"> no CSS</label>
+      </div>
+    </nav>
     <strong>plainpanel</strong>
     <label>socket <output data-text="views.linkLabel"></output></label>
     <span>
@@ -271,6 +226,17 @@
       <div class="pp-row"><button data-on="click:actions.openDatePicker">open date picker</button></div>
     </fieldset>
   </footer>
+
+  <!-- ═══ SCENE + CHROME: the canvas sits behind the grid (z-index: -1); the
+       .rz strips are the draggable gaps between panels — pointer events feed
+       the layout signals in app.js ═══ -->
+  <canvas id="scene"></canvas>
+  <div class="rz" id="rzLeft" data-rz="left" role="separator" aria-orientation="vertical" aria-label="resize left panel"
+       data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp"></div>
+  <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical" aria-label="resize right panel"
+       data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp"></div>
+  <div class="rz" id="rzBottom" data-rz="bottom" role="separator" aria-orientation="horizontal" aria-label="resize bottom panel"
+       data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp"></div>
 
   <script type="module" src="./app.js"></script>
 </body>
