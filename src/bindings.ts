@@ -30,6 +30,26 @@ export function bindDisabled(el: Element & { disabled: boolean }, source: Readab
 }
 
 /**
+ * Dynamic classes ON TOP of the element's authored classes. The source yields
+ * a space-separated string (or string[]); '' / null clears the dynamic part.
+ * The authored class list is captured once at bind time and always kept, so
+ * status classes come and go without touching layout classes. The element's
+ * class attribute is owned by this binding — nothing else should write it.
+ */
+export function bindClass(el: Element, source: Readable<unknown>): Stop {
+  const base = [...el.classList];
+  return effect(() => {
+    const v = source();
+    const dyn = Array.isArray(v)
+      ? v.map(String)
+      : String(v ?? '')
+          .split(/\s+/)
+          .filter(Boolean);
+    el.setAttribute('class', [...base, ...dyn].join(' '));
+  });
+}
+
+/**
  * Two-way: form control value ⇄ signal.
  * The signal's current type decides coercion (number/boolean/string), so a
  * range slider bound to a number signal round-trips as a number, and a NaN

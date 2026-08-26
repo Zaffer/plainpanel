@@ -1,6 +1,6 @@
 {
   "name": "plainpanel",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Signals-first micro-library for research dashboard controls. Real HTML, one store, no build step for consumers.",
   "type": "module",
   "exports": {

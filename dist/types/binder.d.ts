@@ -19,6 +19,8 @@
  *                           per bindValue; on <progress>/<meter> it is one-way
  *                           (value ← readable, computeds welcome)
  *   data-show="path"        hidden ← !value
+ *   data-class="path"       classes ← value (string | string[]), ADDED to the
+ *                           element's authored classes (captured at bind time)
  *   data-disabled="path"    disabled ← value
  *   data-inert="path"       inert ← value (whole-subtree disable: focus, clicks, a11y)
  *   data-on="click:path"    listener → function in scope (space-separate multiple pairs)
