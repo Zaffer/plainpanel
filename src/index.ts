@@ -30,6 +30,7 @@ export { bind, resolveValue, resolveTarget, type Scope } from './binder';
 export {
   bindText,
   bindShow,
+  bindClass,
   bindDisabled,
   bindInert,
   bindGauge,

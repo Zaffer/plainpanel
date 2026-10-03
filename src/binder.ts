@@ -19,6 +19,8 @@
  *                           per bindValue; on <progress>/<meter> it is one-way
  *                           (value ← readable, computeds welcome)
  *   data-show="path"        hidden ← !value
+ *   data-class="path"       classes ← value (string | string[]), ADDED to the
+ *                           element's authored classes (captured at bind time)
  *   data-disabled="path"    disabled ← value
  *   data-inert="path"       inert ← value (whole-subtree disable: focus, clicks, a11y)
  *   data-on="click:path"    listener → function in scope (space-separate multiple pairs)
@@ -33,7 +35,7 @@
  *                           "$index" for explicitly positional rows.
  */
 import { effect, isComputed, isSignal, signal, untracked, type Signal, type Stop } from './signals';
-import { bindDisabled, bindGauge, bindInert, bindShow, bindText, bindValue, bindWheel, listen } from './bindings';
+import { bindClass, bindDisabled, bindGauge, bindInert, bindShow, bindText, bindValue, bindWheel, listen } from './bindings';
 
 export type Scope = object;
 
@@ -74,7 +76,7 @@ export function resolveTarget(scope: Scope, path: string): unknown {
   return walk(scope, path);
 }
 
-const SELECTOR = '[data-text],[data-bind],[data-show],[data-disabled],[data-inert],[data-on],[data-each]';
+const SELECTOR = '[data-text],[data-bind],[data-show],[data-class],[data-disabled],[data-inert],[data-on],[data-each]';
 
 /**
  * Binds root and its descendants against the scope. Returns a Stop that
@@ -128,6 +130,7 @@ export function bind(root: Element | Document | DocumentFragment, scope: Scope):
 
     if (d.text !== undefined) stops.push(bindText(el, read(d.text)));
     if (d.show !== undefined) stops.push(bindShow(el as HTMLElement, read(d.show)));
+    if (d.class !== undefined) stops.push(bindClass(el, read(d.class)));
     if (d.disabled !== undefined) {
       stops.push(bindDisabled(el as Element & { disabled: boolean }, read(d.disabled)));
     }

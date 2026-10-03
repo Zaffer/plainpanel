@@ -155,3 +155,26 @@ test('series: rolling capacity, gaps, reactive read, clear', () => {
   assert.deepEqual(s.read(), []);
   stop();
 });
+
+test('bindClass: dynamic classes ride on top of authored classes', async () => {
+  const { bindClass, signal: sig } = await import('../dist/plainpanel.js');
+  // duck-typed element: bindClass only reads classList once and writes setAttribute
+  let written = '';
+  const el = {
+    classList: ['chip', 'wide'],
+    setAttribute(name, value) {
+      assert.equal(name, 'class');
+      written = value;
+    },
+  };
+  const status = sig('ok');
+  const stop = bindClass(el, status);
+  assert.equal(written, 'chip wide ok');
+  status('bad urgent'); // space-separated string
+  assert.equal(written, 'chip wide bad urgent');
+  status(''); // clears the dynamic part, authored classes stay
+  assert.equal(written, 'chip wide');
+  status(['a', 'b']); // string[] form
+  assert.equal(written, 'chip wide a b');
+  stop();
+});

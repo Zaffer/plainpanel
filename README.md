@@ -80,6 +80,7 @@ It returns a `Stop` that removes all bindings.
 | `data-text="path"` | any element | `textContent` ← value |
 | `data-bind="path"` | input/select/textarea/details | two-way ⇄ **signal**. The signal's current value sets the type (number/boolean/string); NaN is never written. Checkbox → boolean; radio group → one signal, checked by value; `select[multiple]` → string[]; `type=file` → one-way DOM→signal (File[]); `<details>` → open ⇄ boolean; `<progress>`/`<meter>` → one-way value ← readable (computeds welcome) |
 | `data-show="path"` | any element | native `hidden` ← `!value` |
+| `data-class="path"` | any element | dynamic classes ← value (string or string[]), ADDED to the element's authored classes. Status classes (`ok`/`bad`) come and go; layout classes stay. The class attribute is owned by the binding |
 | `data-disabled="path"` | button/input/… | `disabled` ← value. State disables controls; it never hides or moves them |
 | `data-inert="path"` | any element | native `inert` ← value. Disables the full subtree (focus, clicks, a11y) |
 | `data-on="click:path"` | any element | listener → function in scope. Separate multiple `event:path` pairs with spaces |

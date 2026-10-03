@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.3 — 2026-08-26
+
+- New `data-class` attribute (and `bindClass` primitive): dynamic status
+  classes from a path, added on top of the element's authored classes. The
+  value is a space-separated string or string[]; authored classes are captured
+  at bind time and always kept. Works inside `data-each` rows (`$item.cls`).
+
 ## 0.4.0 — 2026-08-21
 
 - Full form-control coverage in `data-bind`: radio groups (one signal per

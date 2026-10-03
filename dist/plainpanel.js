@@ -589,6 +589,14 @@ function bindDisabled(el, source) {
     el.disabled = !!source();
   });
 }
+function bindClass(el, source) {
+  const base = [...el.classList];
+  return effect2(() => {
+    const v = source();
+    const dyn = Array.isArray(v) ? v.map(String) : String(v ?? "").split(/\s+/).filter(Boolean);
+    el.setAttribute("class", [...base, ...dyn].join(" "));
+  });
+}
 function bindValue(el, sig) {
   if (el instanceof HTMLDetailsElement) {
     const stop2 = effect2(() => {
@@ -702,7 +710,7 @@ function resolveValue(scope, path) {
 function resolveTarget(scope, path) {
   return walk(scope, path);
 }
-var SELECTOR = "[data-text],[data-bind],[data-show],[data-disabled],[data-inert],[data-on],[data-each]";
+var SELECTOR = "[data-text],[data-bind],[data-show],[data-class],[data-disabled],[data-inert],[data-on],[data-each]";
 function bind(root, scope) {
   const stops = [];
   const read = (path) => {
@@ -740,6 +748,7 @@ function bind(root, scope) {
     }
     if (d.text !== void 0) stops.push(bindText(el, read(d.text)));
     if (d.show !== void 0) stops.push(bindShow(el, read(d.show)));
+    if (d.class !== void 0) stops.push(bindClass(el, read(d.class)));
     if (d.disabled !== void 0) {
       stops.push(bindDisabled(el, read(d.disabled)));
     }
@@ -1036,6 +1045,7 @@ export {
   Panel,
   batch,
   bind,
+  bindClass,
   bindDisabled,
   bindGauge,
   bindInert,
