@@ -29,11 +29,12 @@ UI rules (which control to use, grouping, legibility) are in DESIGN.md.
 
 ## Hard-won rules
 
-- Chrome silently cancels an in-progress native slider drag when the child
-  list of the slider's <fieldset> changes (vanilla-reproducible; no event, no
-  error). data-each only structurally mutates on length change, but still:
-  keep data-each templates in their own container, never in the same fieldset
-  as controls that drive them.
+- Chrome silently cancels an in-progress native slider drag when a
+  fieldset's own child list changes, if that fieldset contains the slider or
+  sits inside a fieldset that does (no event, no error). Children added inside
+  a div or details are safe, even within the slider's own fieldset. So
+  anything inserted at runtime (data-each rows, async panel() mounts) goes
+  into a div, or a fieldset that shares no fieldset ancestor with sliders.
 - Synthetic events (dispatchEvent) do NOT exercise native drag gestures.
   Verify sliders with real input (CDP Input domain / chrome-devtools drag),
   not just synthetic input events.

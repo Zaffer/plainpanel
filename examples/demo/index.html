@@ -197,20 +197,32 @@
           for the word polytopy and the browser reveals it.</div>
       </details>
     </fieldset>
-
-    <fieldset>
-      <legend>live stats</legend>
-      <template data-each="views.stats" data-key="label">
-        <div><span data-text="$item.label"></span>: <span data-text="$item.value"></span></div>
-      </template>
-    </fieldset>
-
-    <fieldset>
-      <legend>store snapshot (live)</legend>
-      <small>every control above writes here — reproducibility is one JSON.stringify away</small>
-      <pre data-text="views.galleryJson"></pre>
-    </fieldset>
   </section>
+
+  <!-- ═══ MAIN PANEL: the legend's radios pick which page of this fieldset
+       shows ("which page?" is a radio, DESIGN.md rule 2). Pages hide with the
+       native hidden attribute (data-show), so they work with no CSS. ═══ -->
+  <!-- <section id="main"> -->
+    <fieldset id="main">
+      <legend>page
+        <label><input type="radio" name="page" value="scene" data-bind="ui.page"> scene</label>
+        <label><input type="radio" name="page" value="store" data-bind="ui.page"> store</label>
+        <label><input type="radio" name="page" value="stats" data-bind="ui.page"> stats</label>
+      </legend>
+      <div id="pageScene" data-show="views.pageScene">
+        <small>the 3D scene shows through this page</small>
+      </div>
+      <div data-show="views.pageStore">
+        <small>every gallery control writes here — reproducibility is one JSON.stringify away</small>
+        <pre data-text="views.galleryJson"></pre>
+      </div>
+      <div data-show="views.pageStats">
+        <template data-each="views.stats" data-key="label">
+          <div><span data-text="$item.label"></span>: <span data-text="$item.value"></span></div>
+        </template>
+      </div>
+    </fieldset>
+  <!-- </section> -->
 
   <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical"
     aria-label="resize right panel"

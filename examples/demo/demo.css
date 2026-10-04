@@ -35,6 +35,7 @@ body {
 /* the panels: opaque boxes over the scene, each scrolling on its own */
 #top,
 #left,
+#main,
 #right,
 #bottom {
   background: Canvas;
@@ -56,6 +57,19 @@ body {
 #right {
   grid-area: 3 / 5 / 4 / 6;
 }
+/* the main panel: one fieldset filling it, see-through on the scene page so
+   the canvas shows */
+#main {
+  grid-area: 3 / 3 / 4 / 4;
+  display: flex;
+  flex-direction: column;
+}
+#main > fieldset {
+  flex: 1 0 auto;
+}
+#main:has(#pageScene:not([hidden])) {
+  background: none;
+}
 #bottom {
   grid-area: 5 / 1 / 6 / 6;
   display: flex;
@@ -65,6 +79,7 @@ body {
 /* a slight round on every box the page draws; native controls keep their own */
 #top,
 #left,
+#main,
 #right,
 #bottom,
 fieldset,
@@ -75,19 +90,13 @@ dialog {
 
 /* Resize handles: they live in the grid gaps and feed pointer events to the
    layout signals (app.js). The grip glyph is HTML content (⋮ / ⋯), so the
-   handle reads as a handle without CSS too; this centres it and shows it
-   only on hover or mid-drag. */
+   handle reads as a handle without CSS too; this just centres it. */
 .rz {
   touch-action: none;
   user-select: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: transparent;
-}
-.rz:hover,
-.rz:active {
-  color: CanvasText;
 }
 #rzLeft {
   grid-area: 3 / 2 / 4 / 3;

@@ -74,6 +74,7 @@ const ui = {
   theme: signal('dark'),
   scene: signal(true), // three.js render loop on/off
   noCss: signal(false), // disables every author stylesheet — raw HTML remains
+  page: signal('scene'), // main panel page: a radio group in its legend
 };
 // panel geometry — effects project these into CSS variables below
 const layout = { leftW: signal(320), rightW: signal(280), bottomH: signal(200) };
@@ -101,6 +102,10 @@ const views = {
   metricValue: computed(() => snap().metric),
   metricLabel: computed(() => snap().metric.toFixed(4) + ' @ ' + snap().seq),
   progress: computed(() => 1 - snap().metric),
+  // main panel pages: data-show takes a path, not page === 'x', so one computed each
+  pageScene: computed(() => ui.page() === 'scene'),
+  pageStore: computed(() => ui.page() === 'store'),
+  pageStats: computed(() => ui.page() === 'stats'),
   // gallery + stage
   stats: computed(() => {
     const s = stats();
@@ -119,6 +124,7 @@ const views = {
       }),
     );
     snapshot.textPanelOpen = ui.textOpen();
+    snapshot.page = ui.page();
     return JSON.stringify(snapshot, null, 1);
   }),
   features: computed(() => FEATURES.map((f) => ({ label: f.label, value: f.ok ? '✓' : '✗' }))),
