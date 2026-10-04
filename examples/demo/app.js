@@ -72,6 +72,7 @@ const g = {
 const ui = {
   textOpen: signal(true), // a <details> open state, in the store
   theme: signal('dark'),
+  scene: signal(true), // three.js render loop on/off
   noCss: signal(false), // disables every author stylesheet — raw HTML remains
 };
 // panel geometry — effects project these into CSS variables below
@@ -122,6 +123,7 @@ const views = {
     return JSON.stringify(snapshot, null, 1);
   }),
   features: computed(() => FEATURES.map((f) => ({ label: f.label, value: f.ok ? '✓' : '✗' }))),
+  sceneLabel: computed(() => (ui.scene() ? '3D on' : '3D off')),
   themeLabel: computed(() => (ui.theme() === 'dark' ? '☾ dark mode' : '☀ light mode')),
 };
 
@@ -169,6 +171,7 @@ const actions = {
       g.pinged('showPicker refused: ' + err.name);
     }
   },
+  toggleScene: () => ui.scene(!ui.scene()),
   toggleTheme: () => ui.theme(ui.theme() === 'dark' ? 'light' : 'dark'),
   // panel resizing: pointer capture keeps move/up on the handle itself,
   // so three listeners per handle cover the whole gesture. One write per move.
@@ -201,6 +204,7 @@ effect(() => stage.setScale(params.scale()));
 effect(() => stage.setSpin(params.spinX(), params.spinY()));
 effect(() => stage.setWireframe(params.wireframe()));
 effect(() => stage.setColor(params.color()));
+effect(() => stage.setRunning(ui.scene()));
 stage.onStats((s) => stats(s)); // ~5 Hz snapshots out of the render loop → one signal write
 
 // ---------- layout & chrome: the same pattern — effects push store values out ----------

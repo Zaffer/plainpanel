@@ -13,7 +13,7 @@ export function createStage(canvas) {
     console.warn('stage: WebGL unavailable, running without 3D —', err.message);
     canvas.remove();
     const noop = () => {};
-    return { setShape: noop, setScale: noop, setSpin: noop, setWireframe: noop, setColor: noop, setBackground: noop, onStats: noop, dispose: noop };
+    return { setShape: noop, setScale: noop, setSpin: noop, setWireframe: noop, setColor: noop, setBackground: noop, setRunning: noop, onStats: noop, dispose: noop };
   }
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111);
@@ -47,7 +47,7 @@ export function createStage(canvas) {
   const clock = new THREE.Clock();
   let frames = 0;
   let elapsed = 0;
-  renderer.setAnimationLoop(() => {
+  function frame() {
     const dt = clock.getDelta();
     if (mesh) {
       mesh.rotation.x += spin.x * dt;
@@ -66,7 +66,8 @@ export function createStage(canvas) {
       frames = 0;
       elapsed = 0;
     }
-  });
+  }
+  renderer.setAnimationLoop(frame);
 
   return {
     setShape(name) {
@@ -98,6 +99,15 @@ export function createStage(canvas) {
     },
     setBackground(hex) {
       scene.background.set(hex);
+    },
+    // off: no frames at all (zero GPU work) and the canvas leaves the page
+    setRunning(on) {
+      canvas.hidden = !on;
+      if (on) clock.getDelta(); // swallow the paused interval: no rotation jump on resume
+      frames = 0;
+      elapsed = 0;
+      renderer.setAnimationLoop(on ? frame : null);
+      if (!on && statsListener) statsListener({ fps: 0, rotationX: mesh ? mesh.rotation.x : 0, rotationY: mesh ? mesh.rotation.y : 0, triangles: 0 });
     },
     onStats(fn) {
       statsListener = fn;
