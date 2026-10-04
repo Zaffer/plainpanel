@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <title>plainpanel demo</title>
@@ -9,6 +10,7 @@
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
   </script>
 </head>
+
 <body>
 
   <!-- ═══ TOP BAR: the experiment. Server-owned state: data-text/data-disabled
@@ -16,19 +18,22 @@
        the screen. Nothing here writes local state. ═══ -->
   <header id="top">
     <nav>
-      <button popovertarget="menuPop" title="menu">☰</button>
+      <button popovertarget="menuPop" title="menu">☰ menu</button>
       <div popover id="menuPop">
-        <button data-on="click:actions.toggleTheme" data-text="views.themeLabel"></button>
-        <label><input type="checkbox" data-bind="ui.noCss"> no CSS</label>
+        <div>theme:
+          <label><input type="radio" name="theme" value="dark" data-bind="ui.theme"> ☾ dark</label>
+          <label><input type="radio" name="theme" value="light" data-bind="ui.theme"> ☀ light</label>
+        </div>
+        <div><label><input type="checkbox" data-bind="ui.noCss"> 🚫 no CSS</label></div>
       </div>
     </nav>
     <strong>plainpanel</strong>
-    <button data-on="click:actions.toggleScene" data-text="views.sceneLabel" title="three.js render loop"></button>
+    <label title="three.js render loop"><input type="checkbox" switch data-bind="ui.scene"> 🧊 3D</label>
     <label>socket <output data-text="views.linkLabel"></output></label>
     <span>
-      <button data-text="views.armLabel" data-on="click:actions.arm" data-disabled="views.armLocked"></button>
+      <label><input type="checkbox" switch data-bind="arm.on" data-disabled="views.armLocked"> ⚡ armed</label>
       <!-- declarative modal: commandfor/command needs no JS wiring -->
-      <button commandfor="confirmStop" command="show-modal" data-disabled="views.stopLocked">stop run</button>
+      <button commandfor="confirmStop" command="show-modal" data-disabled="views.stopLocked">⏹ stop run</button>
     </span>
     <label>status <output data-text="views.statusLabel"></output></label>
     <label>battery <output data-text="views.battery"></output></label>
@@ -43,9 +48,12 @@
   </header>
 
   <dialog id="confirmStop" closedby="any">
-    <p>Stop the current run?</p>
-    <button commandfor="confirmStop" command="close" data-on="click:actions.stop">stop</button>
-    <button commandfor="confirmStop" command="close">keep running</button>
+    <fieldset>
+      <legend>stop run</legend>
+      <p>Stop the current run?</p>
+      <button commandfor="confirmStop" command="close" data-on="click:actions.stop">⏹ stop</button>
+      <button commandfor="confirmStop" command="close">▶ keep running</button>
+    </fieldset>
   </dialog>
 
   <!-- ═══ LEFT PANEL: every HTML form control, bound ═══ -->
@@ -53,24 +61,24 @@
 
     <fieldset>
       <legend>object
-        <button popovertarget="helpObject">?</button>
+        <button popovertarget="helpObject">❔ help</button>
       </legend>
       <div popover id="helpObject">These drive the three.js mesh through
         stage.js's narrow API. Drag any slider and watch the scene and the
         right panel follow.</div>
       <div><label>shape
-        <select data-bind="params.shape">
-          <option value="knot">torus knot</option>
-          <option value="box">box</option>
-          <option value="sphere">sphere</option>
-        </select></label></div>
+          <select data-bind="params.shape">
+            <option value="knot">🥨 torus knot</option>
+            <option value="box">📦 box</option>
+            <option value="sphere">🔵 sphere</option>
+          </select></label></div>
       <div><label>scale <output data-text="views.scaleLabel"></output><br>
-        <input type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
+          <input type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
       <div><label>spin x <output data-text="views.spinXLabel"></output><br>
-        <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
+          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
       <div><label>spin y <output data-text="views.spinYLabel"></output><br>
-        <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
-      <div><label><input type="checkbox" data-bind="params.wireframe"> wireframe</label></div>
+          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
+      <div><label><input type="checkbox" data-bind="params.wireframe"> 🕸 wireframe</label></div>
       <div><label>color <input type="color" data-bind="params.color"></label></div>
     </fieldset>
 
@@ -83,95 +91,109 @@
 
     <!-- <details name="gallery">: native accordion — opening one closes the others.
          The first one's open state is data-bind'ed into the store (watch the JSON). -->
-    <details name="gallery" data-bind="ui.textOpen">
-      <summary>text inputs</summary>
-      <div><label>text <input type="text" data-bind="g.text"></label></div>
-      <div><label>search <input type="search" data-bind="g.search"></label></div>
-      <div><label>tel <input type="tel" data-bind="g.tel"></label></div>
-      <div><label>url <input type="url" data-bind="g.url"></label></div>
-      <div><label>email <input type="email" data-bind="g.email"></label></div>
-      <div><label>password <input type="password" data-bind="g.password"></label></div>
-      <div><label>textarea<br><textarea rows="2" data-bind="g.notes"></textarea></label></div>
-      <div><label>combobox (datalist)
-        <input list="ports" data-bind="g.combo" placeholder="type or pick…">
-        <datalist id="ports">
-          <option value="/dev/ttyUSB0"></option>
-          <option value="/dev/ttyACM0"></option>
-          <option value="COM3"></option>
-        </datalist></label></div>
-    </details>
+    <fieldset>
+      <legend>gallery</legend>
+      <details name="gallery" data-bind="ui.textOpen">
+        <summary>text inputs</summary>
+        <div><label>text <input type="text" data-bind="g.text"></label></div>
+        <div><label>search <input type="search" data-bind="g.search"></label></div>
+        <div><label>tel <input type="tel" data-bind="g.tel"></label></div>
+        <div><label>url <input type="url" data-bind="g.url"></label></div>
+        <div><label>email <input type="email" data-bind="g.email"></label></div>
+        <div><label>password <input type="password" data-bind="g.password"></label></div>
+        <div><label>textarea<br><textarea rows="2" data-bind="g.notes"></textarea></label></div>
+        <div><label>combobox (datalist)
+            <input list="ports" data-bind="g.combo" placeholder="type or pick…">
+            <datalist id="ports">
+              <option value="/dev/ttyUSB0"></option>
+              <option value="/dev/ttyACM0"></option>
+              <option value="COM3"></option>
+            </datalist></label></div>
+      </details>
 
-    <details name="gallery">
-      <summary>numbers</summary>
-      <div><label>number <input type="number" min="0" max="100" step="1" data-bind="g.number" data-wheel></label></div>
-      <div><label>range <output data-text="g.range"></output><br>
-        <input type="range" min="0" max="1" step="0.01" data-bind="g.range" data-wheel></label></div>
-    </details>
-
-    <details name="gallery">
-      <summary>date &amp; time pickers</summary>
-      <div><label>date <input type="date" id="galleryDate" data-bind="g.date"></label></div>
-      <div><label>time <input type="time" data-bind="g.time"></label></div>
-      <div><label>datetime-local <input type="datetime-local" data-bind="g.datetimeLocal"></label></div>
-      <div><label>month <input type="month" data-bind="g.month"></label></div>
-      <div><label>week <input type="week" data-bind="g.week"></label></div>
-    </details>
-
-    <details name="gallery">
-      <summary>choices</summary>
-      <div><label><input type="checkbox" data-bind="g.checkbox"> checkbox</label></div>
-      <div>radio group:
-        <label><input type="radio" name="radioDemo" value="alpha" data-bind="g.radio"> alpha</label>
-        <label><input type="radio" name="radioDemo" value="beta" data-bind="g.radio"> beta</label>
-        <label><input type="radio" name="radioDemo" value="gamma" data-bind="g.radio"> gamma</label>
-      </div>
-      <div><label>select
-        <select data-bind="g.select">
-          <option value="one">one</option><option value="two">two</option><option value="three">three</option>
-        </select></label></div>
-      <div><label>select + optgroup
-        <select data-bind="g.grouped">
-          <optgroup label="low"><option value="min">min</option><option value="mid">mid</option></optgroup>
-          <optgroup label="high"><option value="max">max</option></optgroup>
-        </select></label></div>
-      <div><label>select multiple (ctrl-click)<br>
-        <select multiple size="4" data-bind="g.multi">
-          <option value="a">alpha</option><option value="b">beta</option>
-          <option value="c">gamma</option><option value="d">delta</option>
-        </select></label></div>
-    </details>
-
-    <details name="gallery">
-      <summary>file &amp; buttons</summary>
-      <div><label>file (one-way → store)<br>
-        <input type="file" multiple data-bind="g.files"></label></div>
-      <div><button data-on="click:actions.ping">plain &lt;button&gt;</button>
-        <input type="button" value="input type=button" data-on="click:actions.ping"></div>
-      <form data-on="submit:actions.formSubmit">
-        <div><label>in a real form <input type="text" data-bind="g.formText"></label></div>
-        <div>
-          <input type="submit" value="submit">
-          <input type="reset" value="reset">
-          <input type="image" alt="image submit" width="16" height="16"
-                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%238fc7ff'/%3E%3C/svg%3E">
+      <details name="gallery">
+        <summary>numbers</summary>
+        <div><label>number <input type="number" min="0" max="100" step="1" data-bind="g.number" data-wheel></label>
         </div>
-        <small>type=reset resets the DOM only — the store never hears it.
-        This is why dashboards use buttons + actions, not form machinery.</small>
-      </form>
-      <input type="hidden" data-bind="g.hidden">
-      <small>an input type=hidden is bound above — see it in the JSON, nowhere else</small>
-    </details>
+        <div><label>range <output data-text="g.range"></output><br>
+            <input type="range" min="0" max="1" step="0.01" data-bind="g.range" data-wheel></label></div>
+      </details>
 
-    <details name="gallery">
-      <summary>display elements</summary>
-      <div><label>output <output data-text="g.number"></output></label></div>
-      <div><label>meter <meter data-bind="g.range" min="0" max="1"></meter></label></div>
-      <div><label>progress <progress data-bind="g.range" max="1"></progress></label></div>
-      <div>last ping: <time data-text="g.pinged"></time></div>
-      <div><data value="42">the answer (a &lt;data&gt; element)</data></div>
-      <div hidden="until-found">This paragraph is hidden="until-found" — Ctrl+F
-        for the word polytopy and the browser reveals it.</div>
-    </details>
+      <details name="gallery">
+        <summary>date &amp; time pickers</summary>
+        <div><label>date <input type="date" id="galleryDate" data-bind="g.date"></label></div>
+        <div><label>time <input type="time" data-bind="g.time"></label></div>
+        <div><label>datetime-local <input type="datetime-local" data-bind="g.datetimeLocal"></label></div>
+        <div><label>month <input type="month" data-bind="g.month"></label></div>
+        <div><label>week <input type="week" data-bind="g.week"></label></div>
+      </details>
+
+      <details name="gallery">
+        <summary>choices</summary>
+        <div><label><input type="checkbox" data-bind="g.checkbox"> ☑ checkbox</label></div>
+        <div>radio group:
+          <label><input type="radio" name="radioDemo" value="alpha" data-bind="g.radio"> α alpha</label>
+          <label><input type="radio" name="radioDemo" value="beta" data-bind="g.radio"> β beta</label>
+          <label><input type="radio" name="radioDemo" value="gamma" data-bind="g.radio"> γ gamma</label>
+        </div>
+        <div><label>select
+            <select data-bind="g.select">
+              <option value="one">1️⃣ one</option>
+              <option value="two">2️⃣ two</option>
+              <option value="three">3️⃣ three</option>
+            </select></label></div>
+        <div><label>select + optgroup
+            <select data-bind="g.grouped">
+              <optgroup label="low">
+                <option value="min">▁ min</option>
+                <option value="mid">▄ mid</option>
+              </optgroup>
+              <optgroup label="high">
+                <option value="max">█ max</option>
+              </optgroup>
+            </select></label></div>
+        <div><label>select multiple (ctrl-click)<br>
+            <select multiple size="4" data-bind="g.multi">
+              <option value="a">α alpha</option>
+              <option value="b">β beta</option>
+              <option value="c">γ gamma</option>
+              <option value="d">δ delta</option>
+            </select></label></div>
+      </details>
+
+      <details name="gallery">
+        <summary>file &amp; buttons</summary>
+        <div><label>file (one-way → store)<br>
+            <input type="file" multiple data-bind="g.files"></label></div>
+        <div><button data-on="click:actions.ping">🔔 plain &lt;button&gt;</button>
+          <input type="button" value="🔔 input type=button" data-on="click:actions.ping">
+        </div>
+        <form data-on="submit:actions.formSubmit">
+          <div><label>in a real form <input type="text" data-bind="g.formText"></label></div>
+          <div>
+            <input type="submit" value="📨 submit">
+            <input type="reset" value="↺ reset">
+            <input type="image" alt="image submit" width="16" height="16"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%238fc7ff'/%3E%3C/svg%3E">
+          </div>
+          <small>type=reset resets the DOM only — the store never hears it.
+            This is why dashboards use buttons + actions, not form machinery.</small>
+        </form>
+        <input type="hidden" data-bind="g.hidden">
+        <small>an input type=hidden is bound above — see it in the JSON, nowhere else</small>
+      </details>
+
+      <details name="gallery">
+        <summary>display elements</summary>
+        <div><label>output <output data-text="g.number"></output></label></div>
+        <div><label>meter <meter data-bind="g.range" min="0" max="1"></meter></label></div>
+        <div><label>progress <progress data-bind="g.range" max="1"></progress></label></div>
+        <div>last ping: <time data-text="g.pinged"></time></div>
+        <div><data value="42">the answer (a &lt;data&gt; element)</data></div>
+        <div hidden="until-found">This paragraph is hidden="until-found" — Ctrl+F
+          for the word polytopy and the browser reveals it.</div>
+      </details>
+    </fieldset>
 
     <fieldset>
       <legend>live stats</legend>
@@ -189,7 +211,16 @@
   </section>
 
   <!-- ═══ RIGHT PANEL: the same store via the panel builder (see app.js) ═══ -->
-  <section id="right"></section>
+  <!-- two fieldsets: the schema panel arrives async, and adding it to a
+       fieldset that holds sliders would cancel an in-progress drag (Chrome) -->
+  <section id="right">
+    <fieldset id="builder">
+      <legend>
+        builder
+      </legend>
+    </fieldset>
+    <fieldset id="schemaPanel"></fieldset>
+  </section>
 
   <!-- ═══ BOTTOM BAR: Chromium-only / emerging platform features ═══ -->
   <footer id="bottom">
@@ -202,13 +233,16 @@
 
     <fieldset>
       <legend>customizable &lt;select&gt;</legend>
-      <small>&lt;selectedcontent&gt; needs appearance: base-select (CSS) — without it this is a plain select, bound to the same shape signal</small>
+      <small>&lt;selectedcontent&gt; needs appearance: base-select (CSS) — without it this is a plain select, bound to
+        the same shape signal</small>
       <div>
         <select data-bind="params.shape">
-          <button><selectedcontent></selectedcontent></button>
-          <option value="knot">torus knot</option>
-          <option value="box">box</option>
-          <option value="sphere">sphere</option>
+          <button>
+            <selectedcontent></selectedcontent>
+          </button>
+          <option value="knot">🥨 torus knot</option>
+          <option value="box">📦 box</option>
+          <option value="sphere">🔵 sphere</option>
         </select>
       </div>
     </fieldset>
@@ -216,14 +250,14 @@
     <fieldset>
       <legend>anchored popover</legend>
       <small>without CSS anchor positioning the popover opens centred, not pinned to its button</small>
-      <div><button popovertarget="anchoredPop">open anchored popover</button></div>
+      <div><button popovertarget="anchoredPop">📌 open anchored popover</button></div>
       <div popover id="anchoredPop">anchored above the invoker, light-dismiss included</div>
     </fieldset>
 
     <fieldset>
       <legend>showPicker()</legend>
       <small>programmatically opens the gallery's date picker</small>
-      <div><button data-on="click:actions.openDatePicker">open date picker</button></div>
+      <div><button data-on="click:actions.openDatePicker">📅 open date picker</button></div>
     </fieldset>
   </footer>
 
@@ -232,12 +266,18 @@
        the layout signals in app.js ═══ -->
   <canvas id="scene"></canvas>
   <div class="rz" id="rzLeft" data-rz="left" role="separator" aria-orientation="vertical" aria-label="resize left panel"
-       data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp"></div>
-  <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical" aria-label="resize right panel"
-       data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp"></div>
-  <div class="rz" id="rzBottom" data-rz="bottom" role="separator" aria-orientation="horizontal" aria-label="resize bottom panel"
-       data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp"></div>
+    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋮
+  </div>
+  <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical"
+    aria-label="resize right panel"
+    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋮
+  </div>
+  <div class="rz" id="rzBottom" data-rz="bottom" role="separator" aria-orientation="horizontal"
+    aria-label="resize bottom panel"
+    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋯
+  </div>
 
   <script type="module" src="./app.js"></script>
 </body>
+
 </html>

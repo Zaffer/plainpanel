@@ -63,10 +63,20 @@ body {
 }
 
 /* Resize handles: they live in the grid gaps and feed pointer events to the
-   layout signals (app.js). */
+   layout signals (app.js). The grip glyph is HTML content (⋮ / ⋯), so the
+   handle reads as a handle without CSS too; this centres it and shows it
+   only on hover or mid-drag. */
 .rz {
   touch-action: none;
   user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+}
+.rz:hover,
+.rz:active {
+  color: CanvasText;
 }
 #rzLeft {
   grid-area: 3 / 2 / 4 / 3;

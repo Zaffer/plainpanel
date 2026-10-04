@@ -2,6 +2,7 @@
 
 Read README.md first: it is the full API and fits in context. The entire
 source is ~600 lines across six files in src/ — when in doubt, read it all.
+UI rules (which control to use, grouping, legibility) are in DESIGN.md.
 
 ## Non-negotiable invariants
 
