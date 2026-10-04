@@ -1,5 +1,4 @@
-/* Structure only: the panel grid, its resize handles, and the scene behind
-   it. Every control renders with browser defaults. Layout is app policy, so
+/* Structure only: the panel grid, its resize handles, and the scene page. Every control renders with browser defaults. Layout is app policy, so
    it all lives here, not in the library. */
 
 /* color-scheme flips the native controls; the theme toggle sets data-theme */
@@ -15,6 +14,7 @@
 }
 
 body {
+  background-color: darkblue;
   box-sizing: border-box;
   margin: 0;
   height: 100vh;
@@ -26,13 +26,7 @@ body {
   grid-template-rows: auto var(--gap) 1fr var(--gap) var(--bottom-h);
   grid-template-columns: var(--left-w) var(--gap) 1fr var(--gap) var(--right-w);
 }
-#scene {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-}
-
-/* the panels: opaque boxes over the scene, each scrolling on its own */
+/* the panels: opaque boxes, each scrolling on its own */
 #top,
 #left,
 #main,
@@ -57,8 +51,9 @@ body {
 #right {
   grid-area: 3 / 5 / 4 / 6;
 }
-/* the main panel: one fieldset filling it, see-through on the scene page so
-   the canvas shows */
+/* the main panel: one fieldset filling it; the scene page fills the
+   fieldset and the canvas fills the page. The canvas is taken out of flow so
+   its drawing-buffer size never feeds back into the layout that sizes it. */
 #main {
   grid-area: 3 / 3 / 4 / 4;
   display: flex;
@@ -66,9 +61,18 @@ body {
 }
 #main > fieldset {
   flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
 }
-#main:has(#pageScene:not([hidden])) {
-  background: none;
+#pageScene {
+  flex: 1;
+  position: relative;
+}
+#scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 #bottom {
   grid-area: 5 / 1 / 6 / 6;

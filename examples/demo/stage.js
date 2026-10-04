@@ -36,13 +36,17 @@ export function createStage(canvas) {
   const spin = { x: 0, y: 0 };
   let statsListener = null;
 
+  // sized by its container (the panel grid, the drag handles), not the window
   function resize() {
-    renderer.setSize(window.innerWidth, window.innerHeight, false);
-    camera.aspect = window.innerWidth / window.innerHeight;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    if (!w || !h) return; // hidden page: keep the last size
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
-  window.addEventListener('resize', resize);
-  resize();
+  const sizer = new ResizeObserver(resize);
+  sizer.observe(canvas);
 
   const clock = new THREE.Clock();
   let frames = 0;
@@ -114,7 +118,7 @@ export function createStage(canvas) {
     },
     dispose() {
       renderer.setAnimationLoop(null);
-      window.removeEventListener('resize', resize);
+      sizer.disconnect();
       if (mesh) mesh.geometry.dispose();
       material.dispose();
       renderer.dispose();

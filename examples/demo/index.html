@@ -201,16 +201,17 @@
 
   <!-- ═══ MAIN PANEL: the legend's radios pick which page of this fieldset
        shows ("which page?" is a radio, DESIGN.md rule 2). Pages hide with the
-       native hidden attribute (data-show), so they work with no CSS. ═══ -->
-  <!-- <section id="main"> -->
-    <fieldset id="main">
+       native hidden attribute (data-show), so they work with no CSS. The
+       scene page holds the three.js canvas. ═══ -->
+  <section id="main">
+    <fieldset>
       <legend>page
         <label><input type="radio" name="page" value="scene" data-bind="ui.page"> scene</label>
         <label><input type="radio" name="page" value="store" data-bind="ui.page"> store</label>
         <label><input type="radio" name="page" value="stats" data-bind="ui.page"> stats</label>
       </legend>
       <div id="pageScene" data-show="views.pageScene">
-        <small>the 3D scene shows through this page</small>
+        <canvas id="scene">3D scene (three.js): the object controls drive it</canvas>
       </div>
       <div data-show="views.pageStore">
         <small>every gallery control writes here — reproducibility is one JSON.stringify away</small>
@@ -222,7 +223,7 @@
         </template>
       </div>
     </fieldset>
-  <!-- </section> -->
+  </section>
 
   <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical"
     aria-label="resize right panel"
@@ -282,9 +283,6 @@
       <div><button data-on="click:actions.openDatePicker">📅 open date picker</button></div>
     </fieldset>
   </footer>
-
-  <!-- ═══ SCENE: the three.js canvas sits behind the grid (z-index: -1) ═══ -->
-  <canvas id="scene"></canvas>
 
   <script type="module" src="./app.js"></script>
 </body>
