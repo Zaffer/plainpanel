@@ -68,5 +68,13 @@ They apply to the demo and to anything built with the panel builder.
 
 10. **CSS is structure, not appearance.** Stylesheets lay out the panels
     (grid, scrolling, resize handles). Controls keep their browser-default
-    look. The "no CSS" toggle is the test: with it on, nothing is lost but
-    layout.
+    look.
+
+11. **Everything works with no CSS.** With every author stylesheet off, the
+    page must stay fully legible and fully functional: every label, value
+    and control is present, readable and usable. Only layout may be lost;
+    never information, a control, or state. CSS therefore never carries
+    meaning or state: no CSS-only tabs or `:checked` tricks, no hiding
+    content with `display`. Showing and hiding is the native `hidden`
+    attribute, set from the store. The demo's "🚫 no CSS" toggle is the
+    test.

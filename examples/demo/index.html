@@ -56,6 +56,9 @@
     </fieldset>
   </dialog>
 
+  <div class="rz" id="rzLeft" data-rz="left" role="separator" aria-orientation="vertical" aria-label="resize left panel"
+    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋮
+  </div>
   <!-- ═══ LEFT PANEL: every HTML form control, bound ═══ -->
   <section id="left">
 
@@ -207,9 +210,12 @@
       <small>every control above writes here — reproducibility is one JSON.stringify away</small>
       <pre data-text="views.galleryJson"></pre>
     </fieldset>
-
   </section>
 
+  <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical"
+    aria-label="resize right panel"
+    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋮
+  </div>
   <!-- ═══ RIGHT PANEL: the same store via the panel builder (see app.js) ═══ -->
   <!-- two fieldsets: the schema panel arrives async, and adding it to a
        fieldset that holds sliders would cancel an in-progress drag (Chrome) -->
@@ -222,6 +228,10 @@
     <fieldset id="schemaPanel"></fieldset>
   </section>
 
+  <div class="rz" id="rzBottom" data-rz="bottom" role="separator" aria-orientation="horizontal"
+    aria-label="resize bottom panel"
+    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋯
+  </div>
   <!-- ═══ BOTTOM BAR: Chromium-only / emerging platform features ═══ -->
   <footer id="bottom">
     <fieldset>
@@ -261,21 +271,8 @@
     </fieldset>
   </footer>
 
-  <!-- ═══ SCENE + CHROME: the canvas sits behind the grid (z-index: -1); the
-       .rz strips are the draggable gaps between panels — pointer events feed
-       the layout signals in app.js ═══ -->
+  <!-- ═══ SCENE: the three.js canvas sits behind the grid (z-index: -1) ═══ -->
   <canvas id="scene"></canvas>
-  <div class="rz" id="rzLeft" data-rz="left" role="separator" aria-orientation="vertical" aria-label="resize left panel"
-    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋮
-  </div>
-  <div class="rz" id="rzRight" data-rz="right" role="separator" aria-orientation="vertical"
-    aria-label="resize right panel"
-    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋮
-  </div>
-  <div class="rz" id="rzBottom" data-rz="bottom" role="separator" aria-orientation="horizontal"
-    aria-label="resize bottom panel"
-    data-on="pointerdown:actions.rzDown pointermove:actions.rzMove pointerup:actions.rzUp pointercancel:actions.rzUp">⋯
-  </div>
 
   <script type="module" src="./app.js"></script>
 </body>

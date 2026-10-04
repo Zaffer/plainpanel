@@ -62,6 +62,17 @@ body {
   align-items: flex-start;
 }
 
+/* a slight round on every box the page draws; native controls keep their own */
+#top,
+#left,
+#right,
+#bottom,
+fieldset,
+[popover],
+dialog {
+  border-radius: 5px;
+}
+
 /* Resize handles: they live in the grid gaps and feed pointer events to the
    layout signals (app.js). The grip glyph is HTML content (⋮ / ⋯), so the
    handle reads as a handle without CSS too; this centres it and shows it
