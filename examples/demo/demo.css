@@ -4,6 +4,8 @@
 /* color-scheme flips the native controls; the theme toggle sets data-theme */
 :root {
   color-scheme: dark;
+  --page: #000000;
+  --panel: #111111;
   --gap: 10px;
   --left-w: 320px; /* the drag handles rewrite these three (app.js) */
   --right-w: 280px;
@@ -11,10 +13,12 @@
 }
 :root[data-theme="light"] {
   color-scheme: light;
+  --page: #ffffff;
+  --panel: #eeeeee;
 }
 
 body {
-  background-color: #000000;
+  background-color: var(--page);
   box-sizing: border-box;
   margin: 0;
   height: 100vh;
@@ -32,7 +36,7 @@ body {
 #main,
 #right,
 #bottom {
-  background: #111111;
+  background: var(--panel);
   border: 1px solid GrayText;
   min-width: 0;
   min-height: 0;
