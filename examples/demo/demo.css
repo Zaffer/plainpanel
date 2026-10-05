@@ -14,7 +14,7 @@
 }
 
 body {
-  background-color: darkblue;
+  background-color: #000000;
   box-sizing: border-box;
   margin: 0;
   height: 100vh;
@@ -32,7 +32,7 @@ body {
 #main,
 #right,
 #bottom {
-  background: Canvas;
+  background: #111111;
   border: 1px solid GrayText;
   min-width: 0;
   min-height: 0;
