@@ -1,9 +1,5 @@
 # Design principles
 
-Rules for how plainpanel UIs are built: which control to reach for, how
-controls are grouped, and what the page must still say with CSS turned off.
-They apply to the demo and to anything built with the panel builder.
-
 ## Controls
 
 1. **One button, one action.** A button does exactly one thing, every time
@@ -40,6 +36,8 @@ They apply to the demo and to anything built with the panel builder.
    app does not reimplement it: the exclusive accordion is `<details name>`,
    the modal is `commandfor` / `command`, the popover is `popovertarget`.
 
+6. **Reactive Interaction.** If a button is clicked there needs to be some feedback to the user that something happened, is happening, or is about to happen. If there is an external API call the button click must result in something showing the user what is going on behind the scenes. User should never have to click a button multiple times waiting for some indication something will happen this time. Every action should have some inductive reaction that accurately reflects the true state of the process.
+
 ## Grouping
 
 6. **Every control sits in a `fieldset`.** The fieldset is the unit of
@@ -58,9 +56,7 @@ They apply to the demo and to anything built with the panel builder.
    characters in the markup. CSS may hide or reveal them; it never creates
    them (no `content:` strings).
 
-9. **Give choices and actions a glyph.** Label each option in a selection
-   and each button with an emoji or symbol next to its word (`☾ dark`,
-   `☀ light`, `▶ start run`, `⏹ stop`). People recognise a
+9. **Give choices and actions a glyph.** People recognise a
    small picture faster than they read a word, and a glyph still says
    something to someone who doesn't read the UI's language. The glyph goes
    alongside the word, never instead of it: the word is what screen readers,
@@ -77,4 +73,4 @@ They apply to the demo and to anything built with the panel builder.
     meaning or state: no CSS-only tabs or `:checked` tricks, no hiding
     content with `display`. Showing and hiding is the native `hidden`
     attribute, set from the store. The demo's "🚫 no CSS" toggle is the
-    test.
+    test. Always include a no CSS option.
