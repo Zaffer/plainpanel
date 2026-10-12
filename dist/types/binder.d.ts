@@ -34,7 +34,7 @@
  *                           the item, "$item" for primitive values, or
  *                           "$index" for explicitly positional rows.
  */
-import { type Stop } from './signals';
+import { type Stop } from './signals.js';
 export type Scope = object;
 /**
  * Resolve a path to its current plain value, reading through any signals or

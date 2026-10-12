@@ -10,8 +10,8 @@
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });
  *   p.button('▶ train', actions.train, { disabled: views.trainLocked });
  */
-import { type Readable, type Signal, type Stop } from './signals';
-import { bindDisabled, bindText, bindValue, bindWheel, listen } from './bindings';
+import { type Readable, type Signal, type Stop } from './signals.js';
+import { bindDisabled, bindText, bindValue, bindWheel, listen } from './bindings.js';
 
 export interface PanelOptions {
   /** Where to append the panel. Default: document.body. */
@@ -37,6 +37,8 @@ export interface SliderOptions extends ControlOptions {
 }
 
 export type SelectOption = string | number | { value: string | number; label: string };
+
+let nextId = 0;
 
 export function panel(title: string, opts: PanelOptions = {}): Panel {
   const p = new Panel(title, opts.open ?? true);
@@ -69,6 +71,10 @@ export class Panel {
     const output = document.createElement('output');
     const input = document.createElement('input');
     input.type = 'range';
+    // The label also holds the <output>, which is labelable and comes first:
+    // without an explicit for, the label would name the output, not the slider.
+    input.id = `pp-slider-${++nextId}`;
+    labelEl.htmlFor = input.id;
     input.min = String(opts.min);
     input.max = String(opts.max);
     input.step = String(opts.step);
@@ -122,7 +128,7 @@ export class Panel {
     return this;
   }
 
-  select(label: string, sig: Signal<string | number>, options: SelectOption[], opts: ControlOptions = {}): this {
+  select<T extends string | number>(label: string, sig: Signal<T>, options: SelectOption[], opts: ControlOptions = {}): this {
     const select = document.createElement('select');
     for (const opt of options) {
       const o = document.createElement('option');

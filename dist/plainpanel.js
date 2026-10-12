@@ -572,6 +572,9 @@ function untracked(fn) {
     setActiveSub(previous);
   }
 }
+var trigger2 = trigger;
+var isSignal2 = isSignal;
+var isComputed2 = isComputed;
 
 // src/bindings.ts
 function bindText(el, source, format) {
@@ -686,7 +689,7 @@ function listen(el, type, handler) {
 
 // src/binder.ts
 function isReadable(v) {
-  return typeof v === "function" && (isSignal(v) || isComputed(v));
+  return typeof v === "function" && (isSignal2(v) || isComputed2(v));
 }
 function walk(scope, path) {
   let current = scope;
@@ -719,7 +722,7 @@ function bind(root, scope) {
   };
   const writable = (path, attr) => {
     const leaf = untracked(() => resolveTarget(scope, path));
-    if (!(typeof leaf === "function" && isSignal(leaf))) {
+    if (!(typeof leaf === "function" && isSignal2(leaf))) {
       throw new Error(`plainpanel: ${attr}="${path}" must point to a signal(), got ${typeof leaf}`);
     }
     return ((...args) => {
@@ -848,6 +851,7 @@ function bindEach(tpl, scope) {
 }
 
 // src/panel.ts
+var nextId = 0;
 function panel(title, opts = {}) {
   const p = new Panel(title, opts.open ?? true);
   (opts.parent ?? document.body).appendChild(p.el);
@@ -876,6 +880,8 @@ var Panel = class _Panel {
     const output = document.createElement("output");
     const input = document.createElement("input");
     input.type = "range";
+    input.id = `pp-slider-${++nextId}`;
+    labelEl.htmlFor = input.id;
     input.min = String(opts.min);
     input.max = String(opts.max);
     input.step = String(opts.step);
@@ -1070,14 +1076,14 @@ export {
   connect,
   effect2 as effect,
   effectScope2 as effectScope,
-  isComputed,
-  isSignal,
+  isComputed2 as isComputed,
+  isSignal2 as isSignal,
   listen,
   panel,
   resolveTarget,
   resolveValue,
   series,
   signal2 as signal,
-  trigger,
+  trigger2 as trigger,
   untracked
 };

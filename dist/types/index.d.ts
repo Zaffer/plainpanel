@@ -9,8 +9,8 @@
  *   4. Imperative surfaces (three.js, canvas) sit behind a narrow API and
  *      receive data via effects; the library never proxies foreign objects.
  */
-export { signal, computed, effect, effectScope, batch, untracked, trigger, isSignal, isComputed, type Signal, type Computed, type Readable, type Stop, } from './signals';
-export { bind, resolveValue, resolveTarget, type Scope } from './binder';
-export { bindText, bindShow, bindClass, bindDisabled, bindInert, bindGauge, bindValue, bindWheel, listen, } from './bindings';
-export { panel, Panel, type PanelOptions, type ControlOptions, type SliderOptions, type SelectOption } from './panel';
-export { series, connect, type Series, type Socket, type SocketOptions } from './edge';
+export { signal, computed, effect, effectScope, batch, untracked, trigger, isSignal, isComputed, type Signal, type Computed, type Readable, type Stop, } from './signals.js';
+export { bind, resolveValue, resolveTarget, type Scope } from './binder.js';
+export { bindText, bindShow, bindClass, bindDisabled, bindInert, bindGauge, bindValue, bindWheel, listen, } from './bindings.js';
+export { panel, Panel, type PanelOptions, type ControlOptions, type SliderOptions, type SelectOption } from './panel.js';
+export { series, connect, type Series, type Socket, type SocketOptions } from './edge.js';

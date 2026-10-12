@@ -11,9 +11,9 @@ http://localhost:8780/examples/demo/.
 ## The idea
 
 ```html
-<label>volume slider
+<label for="volume">volume
   <output data-text="views.label"></output><br>
-  <input type="range" min="0" max="100" data-bind="state.volume">
+  <input id="volume" type="range" min="0" max="100" data-bind="state.volume">
 </label>
 <button data-on="click:actions.reset">↺ reset</button>
 
@@ -32,13 +32,16 @@ State lives in signals. The HTML says which path each node shows.
 `bind()` connects them: one effect for each DOM property, one listener for
 each control. Nothing else reads or writes the DOM.
 
+The `for` is not decoration: without it a label names its *first*
+labelable child, here the `<output>`, and the slider has no accessible name.
+
 ## Install
 
 No build step. Copy `dist/plainpanel.js` into your project, or:
 
 ```html
 <script type="module">
-  import { signal, bind } from 'https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@v0.5.4/dist/plainpanel.js';
+  import { signal, bind } from 'https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@v0.5.5/dist/plainpanel.js';
 </script>
 ```
 
@@ -47,7 +50,7 @@ Pin a release tag (`@vX.Y.Z`); `@master` tracks the latest commit.
 Optional theme (dark, monospace, translucence):
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@v0.5.4/plainpanel.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@v0.5.5/plainpanel.css">
 ```
 
 ## Signals

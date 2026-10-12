@@ -1,6 +1,6 @@
 {
   "name": "plainpanel",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Signals-first micro-library for research dashboard controls. Real HTML, one store, no build step for consumers.",
   "type": "module",
   "exports": {
@@ -17,8 +17,8 @@
   ],
   "scripts": {
     "build": "esbuild src/index.ts --bundle --format=esm --outfile=dist/plainpanel.js && tsc -p tsconfig.json",
-    "test": "npm run build && node --test",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.js && npm run typecheck",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p examples/demo/jsconfig.json && tsc -p test/types",
     "serve": "python3 -m http.server 8137",
     "server": "uv run --with fastapi --with uvicorn --with websockets examples/demo/server.py",
     "types": "npx -y openapi-typescript http://localhost:8780/openapi.json -o examples/demo/api.d.ts"
@@ -39,6 +39,7 @@
     "alien-signals"
   ],
   "devDependencies": {
+    "@types/three": "0.185.4",
     "alien-signals": "3.2.1",
     "esbuild": "^0.25.0",
     "typescript": "^5.9.0"

@@ -11,9 +11,9 @@ import {
   computed as alienComputed,
   effect as alienEffect,
   effectScope as alienEffectScope,
-  isSignal,
-  isComputed,
-  trigger,
+  isSignal as alienIsSignal,
+  isComputed as alienIsComputed,
+  trigger as alienTrigger,
   startBatch,
   endBatch,
   setActiveSub,
@@ -81,4 +81,14 @@ export function untracked<T>(fn: () => T): T {
   }
 }
 
-export { trigger, isSignal, isComputed };
+// Re-declared with our own types: alien-signals is bundled into dist, so the
+// published .d.ts must not import from it (consumers don't have it installed).
+
+/** Notify effects after an in-place change: `trigger(s)`, or `trigger(() => { a(); b(); })` for several. */
+export const trigger: (fn: () => void) => void = alienTrigger;
+
+/** True for a function made by signal(). */
+export const isSignal: (fn: () => void) => boolean = alienIsSignal;
+
+/** True for a function made by computed(). */
+export const isComputed: (fn: () => void) => boolean = alienIsComputed;

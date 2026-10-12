@@ -77,12 +77,12 @@
             <option value="box">📦 box</option>
             <option value="sphere">🔵 sphere</option>
           </select></label></div>
-      <div><label>scale <output data-text="views.scaleLabel"></output><br>
-          <input type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
-      <div><label>spin x <output data-text="views.spinXLabel"></output><br>
-          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
-      <div><label>spin y <output data-text="views.spinYLabel"></output><br>
-          <input type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
+      <div><label for="scaleIn">scale <output data-text="views.scaleLabel"></output><br>
+          <input id="scaleIn" type="range" min="0.2" max="3" step="0.01" data-bind="params.scale" data-wheel></label></div>
+      <div><label for="spinXIn">spin x <output data-text="views.spinXLabel"></output><br>
+          <input id="spinXIn" type="range" min="-3" max="3" step="0.1" data-bind="params.spinX" data-wheel></label></div>
+      <div><label for="spinYIn">spin y <output data-text="views.spinYLabel"></output><br>
+          <input id="spinYIn" type="range" min="-3" max="3" step="0.1" data-bind="params.spinY" data-wheel></label></div>
       <div><label><input type="checkbox" data-bind="params.wireframe"> 🕸 wireframe</label></div>
       <div><label>color <input type="color" data-bind="params.color"></label></div>
     </fieldset>
@@ -111,7 +111,7 @@
         <div><label>password <input type="password" data-bind="g.password"></label></div>
         <div><label>textarea<br><textarea rows="2" data-bind="g.notes"></textarea></label></div>
         <div><label>combobox (datalist)
-            <input list="ports" data-bind="g.combo" placeholder="type or pick…">
+            <input type="text" list="ports" data-bind="g.combo" placeholder="type or pick…">
             <datalist id="ports">
               <option value="/dev/ttyUSB0"></option>
               <option value="/dev/ttyACM0"></option>
@@ -123,8 +123,8 @@
         <summary>numbers</summary>
         <div><label>number <input type="number" min="0" max="100" step="1" data-bind="g.number" data-wheel></label>
         </div>
-        <div><label>range <output data-text="g.range"></output><br>
-            <input type="range" min="0" max="1" step="0.01" data-bind="g.range" data-wheel></label></div>
+        <div><label for="rangeIn">range <output data-text="g.range"></output><br>
+            <input id="rangeIn" type="range" min="0" max="1" step="0.01" data-bind="g.range" data-wheel></label></div>
       </details>
 
       <details name="gallery">

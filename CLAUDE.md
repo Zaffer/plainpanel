@@ -41,6 +41,13 @@ UI rules (which control to use, grouping, legibility) are in DESIGN.md.
 - Inside a data-each reconcile effect, row creation and $item/$index writes
   are wrapped in untracked(): row effects must be top-level (nested ones would
   be purged on every re-run) and item writes must not subscribe the effect.
+- A `<label>` without `for` names its FIRST labelable descendant, and
+  `<output>` is labelable: `label > output + input` leaves the input with no
+  accessible name (and clicks on the text focus the output). Whenever a label
+  holds an output readout, link the input with `for`/`id`.
+- Published types must resolve under `moduleResolution: NodeNext`: relative
+  imports in src/ carry `.js` extensions, and no exported type may come from
+  `alien-signals` (it's bundled, consumers don't have it). test/types/ checks this.
 - data-key is compulsory on data-each (Angular @for made track mandatory for
   the same reason): a forgotten key is a silent wrong-row-state bug, a missing
   attribute is a loud bind-time error. "$index" is the explicit positional
@@ -55,7 +62,9 @@ UI rules (which control to use, grouping, legibility) are in DESIGN.md.
 
 ## Commands
 
-- `npm test` — build + node --test (must stay green; zero test deps)
+- `npm test` — build + node --test + typecheck (src/, the demo's JS via
+  examples/demo/jsconfig.json, and test/types/). Must stay green; zero test
+  deps beyond typescript. Demo JS is strict-checked: keep its JSDoc types.
 - `npm run server` (FastAPI mock rig + statics) then open http://localhost:8780/examples/demo/; `npm run serve` for static-only on :8137
 - Verifying the demo in a headless/WSL browser: WebGL may be unavailable —
   the stage stubs itself out and the dashboard still runs; test 3D visually

@@ -3,7 +3,7 @@
  * Streams (websockets, timers, pointer events) live out here; each event
  * lands in the store as a batched signal write.
  */
-import { type Computed } from './signals';
+import { type Computed } from './signals.js';
 export interface Series {
     /** Append a sample; null marks a gap (a dead source draws a hole, not a frozen line). */
     push(v: number | null): void;

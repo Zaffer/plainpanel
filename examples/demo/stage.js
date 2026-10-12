@@ -1,22 +1,44 @@
+// @ts-check
 // Plain imperative three.js behind a narrow API — no signals in here.
 // The store pushes data in through the setters; stats flow out through one
 // callback. This boundary is invariant 4: never proxy foreign objects.
 import * as THREE from 'three';
 
+/** @typedef {{ fps: number, rotationX: number, rotationY: number, triangles: number }} StageStats */
+/**
+ * The narrow API: the only way in or out of the scene.
+ * @typedef {object} Stage
+ * @property {(name: string) => void} setShape  'knot' | 'box' | 'sphere'
+ * @property {(s: number) => void} setScale
+ * @property {(x: number, y: number) => void} setSpin  radians per second
+ * @property {(on: boolean) => void} setWireframe
+ * @property {(hex: string) => void} setColor
+ * @property {(hex: string) => void} setBackground
+ * @property {(on: boolean) => void} setRunning
+ * @property {(fn: (s: StageStats) => void) => void} onStats
+ * @property {() => void} dispose
+ */
+
+/**
+ * @param {HTMLCanvasElement} canvas
+ * @returns {Stage}
+ */
 export function createStage(canvas) {
+  /** @type {THREE.WebGLRenderer} */
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   } catch (err) {
     // No WebGL (headless / remote session): the dashboard still runs, the
     // stage becomes inert. The narrow API is what makes this stub possible.
-    console.warn('stage: WebGL unavailable, running without 3D —', err.message);
+    console.warn('stage: WebGL unavailable, running without 3D —', err instanceof Error ? err.message : err);
     canvas.remove();
     const noop = () => {};
     return { setShape: noop, setScale: noop, setSpin: noop, setWireframe: noop, setColor: noop, setBackground: noop, setRunning: noop, onStats: noop, dispose: noop };
   }
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111);
+  const background = new THREE.Color(0x111111);
+  scene.background = background;
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
   camera.position.set(0, 0, 6);
 
@@ -25,15 +47,18 @@ export function createStage(canvas) {
   scene.add(key, new THREE.AmbientLight(0x888888));
 
   const material = new THREE.MeshStandardMaterial({ color: 0x8fc7ff });
+  /** @type {Record<string, () => THREE.BufferGeometry>} */
   const geometries = {
     knot: () => new THREE.TorusKnotGeometry(1, 0.32, 128, 16),
     box: () => new THREE.BoxGeometry(1.8, 1.8, 1.8),
     sphere: () => new THREE.SphereGeometry(1.3, 48, 24),
   };
 
+  /** @type {THREE.Mesh | null} */
   let mesh = null;
   let scale = 1;
   const spin = { x: 0, y: 0 };
+  /** @type {((s: StageStats) => void) | null} */
   let statsListener = null;
 
   // sized by its container (the panel grid, the drag handles), not the window
@@ -104,7 +129,7 @@ export function createStage(canvas) {
       material.color.set(hex);
     },
     setBackground(hex) {
-      scene.background.set(hex);
+      background.set(hex);
     },
     // off: no frames at all (zero GPU work) and the canvas leaves the page
     setRunning(on) {

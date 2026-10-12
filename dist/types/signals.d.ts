@@ -1,12 +1,3 @@
-/**
- * Reactive core: alien-signals, re-exported with one hardening rule.
- *
- * Signals are callables: read with `s()`, write with `s(next)`.
- * Every signal and computed is frozen at creation so the classic mistake
- * `s.value = x` throws a TypeError (modules are strict mode) instead of
- * silently assigning a dead property to a function object.
- */
-import { isSignal, isComputed, trigger } from 'alien-signals';
 /** Read with `s()`, write with `s(next)`. Writes of an identical value (===) are no-ops. */
 export type Signal<T> = {
     (): T;
@@ -34,4 +25,9 @@ export declare function effectScope(fn: () => void): Stop;
 export declare function batch(fn: () => void): void;
 /** Read signals inside `fn` without the enclosing effect subscribing to them. */
 export declare function untracked<T>(fn: () => T): T;
-export { trigger, isSignal, isComputed };
+/** Notify effects after an in-place change: `trigger(s)`, or `trigger(() => { a(); b(); })` for several. */
+export declare const trigger: (fn: () => void) => void;
+/** True for a function made by signal(). */
+export declare const isSignal: (fn: () => void) => boolean;
+/** True for a function made by computed(). */
+export declare const isComputed: (fn: () => void) => boolean;

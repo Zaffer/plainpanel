@@ -34,8 +34,8 @@
  *                           the item, "$item" for primitive values, or
  *                           "$index" for explicitly positional rows.
  */
-import { effect, isComputed, isSignal, signal, untracked, type Signal, type Stop } from './signals';
-import { bindClass, bindDisabled, bindGauge, bindInert, bindShow, bindText, bindValue, bindWheel, listen } from './bindings';
+import { effect, isComputed, isSignal, signal, untracked, type Signal, type Stop } from './signals.js';
+import { bindClass, bindDisabled, bindGauge, bindInert, bindShow, bindText, bindValue, bindWheel, listen } from './bindings.js';
 
 export type Scope = object;
 

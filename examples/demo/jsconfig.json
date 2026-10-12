@@ -1,0 +1,18 @@
+{
+  // Type-checks the demo's plain JS (no build step: JSDoc types only).
+  // VS Code picks this up for the editor; `npm run typecheck` runs it too.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["*.js", "*.d.ts"]
+}

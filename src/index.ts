@@ -23,9 +23,9 @@ export {
   type Computed,
   type Readable,
   type Stop,
-} from './signals';
+} from './signals.js';
 
-export { bind, resolveValue, resolveTarget, type Scope } from './binder';
+export { bind, resolveValue, resolveTarget, type Scope } from './binder.js';
 
 export {
   bindText,
@@ -37,8 +37,8 @@ export {
   bindValue,
   bindWheel,
   listen,
-} from './bindings';
+} from './bindings.js';
 
-export { panel, Panel, type PanelOptions, type ControlOptions, type SliderOptions, type SelectOption } from './panel';
+export { panel, Panel, type PanelOptions, type ControlOptions, type SliderOptions, type SelectOption } from './panel.js';
 
-export { series, connect, type Series, type Socket, type SocketOptions } from './edge';
+export { series, connect, type Series, type Socket, type SocketOptions } from './edge.js';

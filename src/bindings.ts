@@ -4,7 +4,7 @@
  *   - one event listener writing one signal (DOM → signal).
  * Both the attribute binder and the panel builder are built from these.
  */
-import { effect, untracked, type Readable, type Signal, type Stop } from './signals';
+import { effect, untracked, type Readable, type Signal, type Stop } from './signals.js';
 
 type ValueElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 

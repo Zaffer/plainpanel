@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.5 — 2026-10-12
+
+- **Types now resolve for NodeNext consumers.** `dist/plainpanel.d.ts` and
+  the generated declarations used extensionless imports, so TypeScript with
+  `moduleResolution: node16/nodenext` saw no exports at all. `trigger`,
+  `isSignal` and `isComputed` no longer import types from the bundled
+  `alien-signals` (which consumers don't have).
+- `panel.select()` is generic: it accepts a `Signal<string>` or
+  `Signal<number>`, not only `Signal<string | number>`.
+- `panel.slider()` labels its input with `for`/`id`: the label also holds the
+  `<output>`, which used to take the label, leaving the slider unnamed for
+  screen readers.
+- `npm test` now also type-checks `src/`, the demo's JS (strict, via
+  `examples/demo/jsconfig.json`) and a NodeNext consumer of the published
+  types (`test/types/`). `tsconfig.json` sets `rootDir` (TypeScript 6+).
+- Demo: strict-clean JSDoc types throughout (`stage.js`'s narrow API is a
+  `Stage` typedef); hand-written sliders get `for`/`id` labels.
+
 ## 0.5.4 — 2026-10-11
 
 - Every `panel` control takes an optional `{ disabled: readable }`

@@ -4,7 +4,7 @@
  *   - one event listener writing one signal (DOM → signal).
  * Both the attribute binder and the panel builder are built from these.
  */
-import { type Readable, type Signal, type Stop } from './signals';
+import { type Readable, type Signal, type Stop } from './signals.js';
 type ValueElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 /** el.textContent tracks the source. */
 export declare function bindText(el: Element, source: Readable<unknown>, format?: (v: unknown) => string): Stop;

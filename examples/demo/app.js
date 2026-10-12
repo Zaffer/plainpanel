@@ -10,6 +10,7 @@
 // Types come from the server's pydantic models: npm run types (regenerates
 // api.d.ts from the running server's OpenAPI).
 /** @typedef {import('./api').components['schemas']['Snapshot']} Snapshot */
+/** @typedef {'arm' | 'disarm' | 'start' | 'stop'} Command */
 import { signal, computed, effect, batch, untracked, bind, panel, connect, series } from '../../dist/plainpanel.js';
 import { createStage } from './stage.js';
 
@@ -21,15 +22,18 @@ const snap = signal(/** @type {Snapshot} */ ({
 const metricSeries = series(220);
 const lastError = signal('');
 
-// The command in flight ('' | 'arm' | 'disarm' | 'start' | 'stop'), and what
-// a snapshot looks like once each command has landed. See command() below.
-const pending = signal('');
+// The command in flight ('' when none), and what a snapshot looks like once
+// each command has landed. See command() below.
+const pending = signal(/** @type {Command | ''} */ (''));
+/** @type {Record<Command, (s: Snapshot) => boolean>} */
 const landed = {
-  arm: (/** @type {Snapshot} */ s) => s.armed,
-  disarm: (/** @type {Snapshot} */ s) => !s.armed,
-  start: (/** @type {Snapshot} */ s) => s.running,
-  stop: (/** @type {Snapshot} */ s) => !s.running,
+  arm: (s) => s.armed,
+  disarm: (s) => !s.armed,
+  start: (s) => s.running,
+  stop: (s) => !s.running,
 };
+/** @type {Record<Command, string>} */
+const pendingLabel = { arm: 'arming…', disarm: 'disarming…', start: 'starting…', stop: 'stopping…' };
 
 // wss on https hosting (GitHub Pages), ws locally
 const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -38,7 +42,8 @@ const sock = connect(`${wsProto}://${location.host}/api/ws`, {
     const s = /** @type {Snapshot} */ (m);
     snap(s);
     metricSeries.push(s.running ? s.metric : null); // null = gap while idle
-    if (pending() && landed[pending()](s)) pending(''); // the command is now visible in the state
+    const cmd = pending();
+    if (cmd && landed[cmd](s)) pending(''); // the command is now visible in the state
   },
 });
 // a dropped socket can never confirm the command in flight: let it go
@@ -78,7 +83,7 @@ const g = {
   select: signal('two'),
   grouped: signal('mid'),
   multi: signal(['a', 'c']),
-  files: signal([]),
+  files: signal(/** @type {File[]} */ ([])),
   formText: signal(''),
   hidden: signal('invisible-but-real'),
   inertDemo: signal(5),
@@ -96,6 +101,9 @@ const ui = {
 const layout = { leftW: signal(320), rightW: signal(280), bottomH: signal(200) };
 const stats = signal({ fps: 0, rotationX: 0, rotationY: 0, triangles: 0 });
 
+// busy: no socket, or a command still in flight — every experiment control locks
+const busy = computed(() => !sock.connected() || pending() !== '');
+
 // ---------- views: readouts + disable logic ----------
 const views = {
   // three.js object
@@ -107,16 +115,15 @@ const views = {
   offline: computed(() => !sock.connected()),
   statusLabel: computed(() => {
     if (!sock.connected()) return 'offline';
-    if (pending()) return { arm: 'arming…', disarm: 'disarming…', start: 'starting…', stop: 'stopping…' }[pending()];
+    const cmd = pending();
+    if (cmd) return pendingLabel[cmd];
     if (snap().running) return 'running';
     return snap().armed ? 'armed' : 'idle';
   }),
   running: computed(() => snap().running),
-  // busy: no socket, or a command still in flight — every experiment control locks
-  busy: computed(() => !sock.connected() || pending() !== ''),
-  armLocked: computed(() => views.busy() || snap().running || (!snap().armed && !snap().ready)),
-  startLocked: computed(() => views.busy() || !snap().armed || snap().running),
-  stopLocked: computed(() => views.busy() || !snap().running),
+  armLocked: computed(() => busy() || snap().running || (!snap().armed && !snap().ready)),
+  startLocked: computed(() => busy() || !snap().armed || snap().running),
+  stopLocked: computed(() => busy() || !snap().running),
   battery: computed(() => snap().battery.toFixed(2) + ' V'),
   metricValue: computed(() => snap().metric),
   metricLabel: computed(() => snap().metric.toFixed(4) + ' @ ' + snap().seq),
@@ -139,7 +146,7 @@ const views = {
     const snapshot = Object.fromEntries(
       Object.entries(g).map(([k, s]) => {
         const v = s();
-        return [k, Array.isArray(v) && v[0] instanceof File ? v.map((f) => f.name) : v];
+        return [k, Array.isArray(v) ? v.map((x) => (x instanceof File ? x.name : x)) : v];
       }),
     );
     snapshot.textPanelOpen = ui.textOpen();
@@ -170,6 +177,11 @@ const FEATURES = [
 // until a snapshot shows it landed, or the server refuses it. Every
 // experiment control stays locked meanwhile, so nobody clicks twice
 // wondering whether the first one took.
+/**
+ * @param {Command} name
+ * @param {Record<string, unknown>} [body]
+ * @returns {Promise<boolean>} whether the server accepted it
+ */
 async function command(name, body) {
   pending(name);
   try {
@@ -192,11 +204,18 @@ async function command(name, body) {
     return false;
   }
 }
+/** @typedef {'left' | 'right' | 'bottom'} Handle */
+/** @type {{ which: Handle, x: number, y: number, from: number } | null} */
+let drag = null; // transient gesture state, not app state — nothing renders from it
+/** @type {(v: number, lo: number, hi: number) => number} */
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
 const actions = {
   stop: () => command('stop'),
   ping() {
     g.pinged(new Date().toLocaleTimeString());
   },
+  /** @param {SubmitEvent} e */
   formSubmit(e) {
     e.preventDefault(); // never actually post — the store is the truth
     g.pinged('form submit ' + new Date().toLocaleTimeString());
@@ -206,25 +225,26 @@ const actions = {
       /** @type {HTMLInputElement} */ (document.getElementById('galleryDate')).showPicker();
       ui.picker(''); // the picker itself is the feedback
     } catch (err) {
-      ui.picker('refused: ' + err.name);
+      ui.picker('refused: ' + (err instanceof Error ? err.name : String(err)));
     }
   },
   // panel resizing: pointer capture keeps move/up on the handle itself,
   // so three listeners per handle cover the whole gesture. One write per move.
+  /** @param {PointerEvent} e */
   rzDown(e) {
     const el = /** @type {HTMLElement} */ (e.currentTarget);
-    const p = /** @type {PointerEvent} */ (e);
-    el.setPointerCapture(p.pointerId);
-    const sig = { left: layout.leftW, right: layout.rightW, bottom: layout.bottomH }[el.dataset.rz];
-    drag = { which: el.dataset.rz, x: p.clientX, y: p.clientY, from: sig() };
+    el.setPointerCapture(e.pointerId);
+    const which = /** @type {Handle} */ (el.dataset.rz);
+    const sig = { left: layout.leftW, right: layout.rightW, bottom: layout.bottomH }[which];
+    drag = { which, x: e.clientX, y: e.clientY, from: sig() };
     e.preventDefault();
   },
+  /** @param {PointerEvent} e */
   rzMove(e) {
     if (!drag) return;
-    const p = /** @type {PointerEvent} */ (e);
-    if (drag.which === 'left') layout.leftW(clamp(drag.from + p.clientX - drag.x, 180, window.innerWidth * 0.45));
-    else if (drag.which === 'right') layout.rightW(clamp(drag.from - (p.clientX - drag.x), 180, window.innerWidth * 0.45));
-    else layout.bottomH(clamp(drag.from - (p.clientY - drag.y), 64, window.innerHeight * 0.6));
+    if (drag.which === 'left') layout.leftW(clamp(drag.from + e.clientX - drag.x, 180, window.innerWidth * 0.45));
+    else if (drag.which === 'right') layout.rightW(clamp(drag.from - (e.clientX - drag.x), 180, window.innerWidth * 0.45));
+    else layout.bottomH(clamp(drag.from - (e.clientY - drag.y), 64, window.innerHeight * 0.6));
   },
   rzUp() {
     drag = null;
@@ -269,18 +289,15 @@ if (!views.noObservable()) {
     }));
 }
 
-let drag = null; // transient gesture state, not app state — nothing renders from it
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-
 // ---------- three.js: imperative escape hatch, data flows in via effects ----------
-const stage = createStage(document.getElementById('scene'));
+const stage = createStage(/** @type {HTMLCanvasElement} */ (document.getElementById('scene')));
 effect(() => stage.setShape(params.shape()));
 effect(() => stage.setScale(params.scale()));
 effect(() => stage.setSpin(params.spinX(), params.spinY()));
 effect(() => stage.setWireframe(params.wireframe()));
 effect(() => stage.setColor(params.color()));
 effect(() => stage.setRunning(ui.scene()));
-stage.onStats((s) => stats(s)); // ~5 Hz snapshots out of the render loop → one signal write
+stage.onStats(stats); // a signal is a setter: ~5 Hz snapshots out of the render loop → one signal write
 
 // ---------- layout & chrome: the same pattern — effects push store values out ----------
 const rootStyle = document.documentElement.style;

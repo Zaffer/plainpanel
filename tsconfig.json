@@ -9,6 +9,7 @@
     "noUnusedParameters": true,
     "declaration": true,
     "emitDeclarationOnly": true,
+    "rootDir": "src",
     "outDir": "dist/types",
     "skipLibCheck": true
   },
