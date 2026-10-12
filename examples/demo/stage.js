@@ -48,11 +48,13 @@ export function createStage(canvas) {
   const sizer = new ResizeObserver(resize);
   sizer.observe(canvas);
 
-  const clock = new THREE.Clock();
+  const timer = new THREE.Timer();
+  timer.connect(document); // a backgrounded tab resumes without a rotation jump
   let frames = 0;
   let elapsed = 0;
   function frame() {
-    const dt = clock.getDelta();
+    timer.update();
+    const dt = timer.getDelta();
     if (mesh) {
       mesh.rotation.x += spin.x * dt;
       mesh.rotation.y += spin.y * dt;
@@ -107,7 +109,7 @@ export function createStage(canvas) {
     // off: no frames at all (zero GPU work) and the canvas leaves the page
     setRunning(on) {
       canvas.hidden = !on;
-      if (on) clock.getDelta(); // swallow the paused interval: no rotation jump on resume
+      if (on) timer.reset(); // swallow the paused interval: no rotation jump on resume
       frames = 0;
       elapsed = 0;
       renderer.setAnimationLoop(on ? frame : null);
@@ -119,6 +121,7 @@ export function createStage(canvas) {
     dispose() {
       renderer.setAnimationLoop(null);
       sizer.disconnect();
+      timer.dispose();
       if (mesh) mesh.geometry.dispose();
       material.dispose();
       renderer.dispose();

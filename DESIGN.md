@@ -36,37 +36,46 @@
    app does not reimplement it: the exclusive accordion is `<details name>`,
    the modal is `commandfor` / `command`, the popover is `popovertarget`.
 
-6. **Reactive Interaction.** If a button is clicked there needs to be some feedback to the user that something happened, is happening, or is about to happen. If there is an external API call the button click must result in something showing the user what is going on behind the scenes. User should never have to click a button multiple times waiting for some indication something will happen this time. Every action should have some inductive reaction that accurately reflects the true state of the process.
+6. **Reactive interaction.** Every click gets feedback: something
+   happened, is happening, or is about to happen. When a click starts an
+   external API call, the page shows what is going on behind the scenes.
+   Users should never click a button again because nothing seemed to
+   happen. Every action gets an indicative reaction that accurately reflects
+   the true state of the process. (The demo: a command shows as pending,
+   "arming…", and locks its controls until a snapshot confirms it.)
 
 ## Grouping
 
-6. **Every control sits in a `fieldset`.** The fieldset is the unit of
+7. **Every control sits in a `fieldset`.** The fieldset is the unit of
    grouping, and its `legend` names the group. Exception: the top bar, which
    is a single status-and-commands strip.
 
-7. **Collapsible groups go inside the fieldset.** `fieldset > details`, not
+8. **Collapsible groups go inside the fieldset.** `fieldset > details`, not
    the other way round. Related `details` (one accordion) share one
    fieldset.
 
 ## Legibility
 
-8. **Meaning is HTML content, not CSS.** The page must read correctly as
+9. **Meaning is HTML content, not CSS.** The page must read correctly as
    plain text, to a screen reader, an LLM, or anyone with styles off.
    Labels, glyphs and affordance hints (the `⋮` / `⋯` resize grips) are real
    characters in the markup. CSS may hide or reveal them; it never creates
    them (no `content:` strings).
 
-9. **Give choices and actions a glyph.** People recognise a
+10. **Give choices and actions a glyph.** People recognise a
    small picture faster than they read a word, and a glyph still says
    something to someone who doesn't read the UI's language. The glyph goes
    alongside the word, never instead of it: the word is what screen readers,
-   search and LLMs rely on (rule 8).
+   search and LLMs rely on (rule 9).
 
-10. **CSS is structure, not appearance.** Stylesheets lay out the panels
-    (grid, scrolling, resize handles). Controls keep their browser-default
-    look.
+11. **CSS is structure, or appearance that does a job.** Stylesheets lay
+    out the panels (grid, scrolling, resize handles). Appearance is allowed
+    only when it shows structure: rounded corners make clear which box a
+    line belongs to, where square corners can be ambiguous; a panel colour
+    marks the edge of a box without a border taking up space. Nothing
+    purely decorative. Controls keep their browser-default look.
 
-11. **Everything works with no CSS.** With every author stylesheet off, the
+12. **Everything works with no CSS.** With every author stylesheet off, the
     page must stay fully legible and fully functional: every label, value
     and control is present, readable and usable. Only layout may be lost;
     never information, a control, or state. CSS therefore never carries

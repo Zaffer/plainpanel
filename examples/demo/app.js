@@ -4,22 +4,32 @@
 // One example, three ownership domains:
 //   server-owned  — the experiment (snap signal, written only by the socket;
 //                   commands go out as POSTs, the next snapshot updates the UI)
-//   client-owned  — the three.js object params and the control gallery
+//   client-owned  — the three.js object params, the control gallery, the UI chrome
 //   imperative    — the three.js scene and the canvas chart, behind narrow APIs
 //
 // Types come from the server's pydantic models: npm run types (regenerates
 // api.d.ts from the running server's OpenAPI).
 /** @typedef {import('./api').components['schemas']['Snapshot']} Snapshot */
-import { signal, computed, effect, untracked, bind, panel, connect, series } from '../../dist/plainpanel.js';
+import { signal, computed, effect, batch, untracked, bind, panel, connect, series } from '../../dist/plainpanel.js';
 import { createStage } from './stage.js';
 
 // ---------- SERVER state: one signal, written only by the socket ----------
 const snap = signal(/** @type {Snapshot} */ ({
   seq: 0, ready: false, armed: false, running: false,
-  battery: 0, metric: 0, pose: { x: 0, y: 0, z: 0 },
+  battery: 0, metric: 1, pose: { x: 0, y: 0, z: 0 }, // metric 1 = the server's fresh value: empty progress bar
 }));
 const metricSeries = series(220);
 const lastError = signal('');
+
+// The command in flight ('' | 'arm' | 'disarm' | 'start' | 'stop'), and what
+// a snapshot looks like once each command has landed. See command() below.
+const pending = signal('');
+const landed = {
+  arm: (/** @type {Snapshot} */ s) => s.armed,
+  disarm: (/** @type {Snapshot} */ s) => !s.armed,
+  start: (/** @type {Snapshot} */ s) => s.running,
+  stop: (/** @type {Snapshot} */ s) => !s.running,
+};
 
 // wss on https hosting (GitHub Pages), ws locally
 const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
@@ -28,7 +38,12 @@ const sock = connect(`${wsProto}://${location.host}/api/ws`, {
     const s = /** @type {Snapshot} */ (m);
     snap(s);
     metricSeries.push(s.running ? s.metric : null); // null = gap while idle
+    if (pending() && landed[pending()](s)) pending(''); // the command is now visible in the state
   },
+});
+// a dropped socket can never confirm the command in flight: let it go
+effect(() => {
+  if (!sock.connected()) pending('');
 });
 
 // ---------- CLIENT state: the three.js object ----------
@@ -75,6 +90,7 @@ const ui = {
   scene: signal(true), // three.js render loop on/off
   noCss: signal(false), // disables every author stylesheet — raw HTML remains
   page: signal('scene'), // main panel page: a radio group in its legend
+  picker: signal(''), // why showPicker() was refused, if it was
 };
 // panel geometry — effects project these into CSS variables below
 const layout = { leftW: signal(320), rightW: signal(280), bottomH: signal(200) };
@@ -91,13 +107,16 @@ const views = {
   offline: computed(() => !sock.connected()),
   statusLabel: computed(() => {
     if (!sock.connected()) return 'offline';
+    if (pending()) return { arm: 'arming…', disarm: 'disarming…', start: 'starting…', stop: 'stopping…' }[pending()];
     if (snap().running) return 'running';
     return snap().armed ? 'armed' : 'idle';
   }),
   running: computed(() => snap().running),
-  armLocked: computed(() => !sock.connected() || snap().running || (!snap().armed && !snap().ready)),
-  startLocked: computed(() => !sock.connected() || !snap().armed || snap().running),
-  stopLocked: computed(() => !sock.connected() || !snap().running),
+  // busy: no socket, or a command still in flight — every experiment control locks
+  busy: computed(() => !sock.connected() || pending() !== ''),
+  armLocked: computed(() => views.busy() || snap().running || (!snap().armed && !snap().ready)),
+  startLocked: computed(() => views.busy() || !snap().armed || snap().running),
+  stopLocked: computed(() => views.busy() || !snap().running),
   battery: computed(() => snap().battery.toFixed(2) + ' V'),
   metricValue: computed(() => snap().metric),
   metricLabel: computed(() => snap().metric.toFixed(4) + ' @ ' + snap().seq),
@@ -128,10 +147,13 @@ const views = {
     return JSON.stringify(snapshot, null, 1);
   }),
   features: computed(() => FEATURES.map((f) => ({ label: f.label, value: f.ok ? '✓' : '✗' }))),
+  noObservable: computed(() => !('when' in EventTarget.prototype)),
 };
 
 // feature detection for the bottom bar (static — computed for uniformity)
 const FEATURES = [
+  { label: 'Observable (EventTarget.when)', ok: 'when' in EventTarget.prototype },
+  { label: '<input switch>', ok: 'switch' in HTMLInputElement.prototype },
   { label: 'popover API', ok: 'popover' in HTMLElement.prototype },
   { label: 'invoker commands (commandfor)', ok: 'command' in document.createElement('button') },
   { label: 'dialog closedby', ok: 'closedBy' in document.createElement('dialog') },
@@ -143,24 +165,35 @@ const FEATURES = [
   { label: 'inert', ok: 'inert' in HTMLElement.prototype },
 ];
 
-// ---------- actions: commands go TO the server; they never write snap ----------
-async function post(path, body) {
+// ---------- commands go TO the server; they never write snap ----------
+// DESIGN.md rule 6: a command reads as pending ("arming…") from the click
+// until a snapshot shows it landed, or the server refuses it. Every
+// experiment control stays locked meanwhile, so nobody clicks twice
+// wondering whether the first one took.
+async function command(name, body) {
+  pending(name);
   try {
-    const r = await fetch('/api/' + path, {
+    const r = await fetch('/api/' + name, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body ?? {}),
     });
     const res = await r.json();
-    lastError(res.ok ? '' : res.error);
+    batch(() => {
+      lastError(res.ok ? '' : res.error);
+      if (!res.ok) pending(''); // refused: nothing will land
+    });
     return !!res.ok;
   } catch (err) {
-    lastError(String(err));
+    batch(() => {
+      lastError(String(err));
+      pending('');
+    });
     return false;
   }
 }
 const actions = {
-  stop: () => post('stop'),
+  stop: () => command('stop'),
   ping() {
     g.pinged(new Date().toLocaleTimeString());
   },
@@ -171,8 +204,9 @@ const actions = {
   openDatePicker() {
     try {
       /** @type {HTMLInputElement} */ (document.getElementById('galleryDate')).showPicker();
+      ui.picker(''); // the picker itself is the feedback
     } catch (err) {
-      g.pinged('showPicker refused: ' + err.name);
+      ui.picker('refused: ' + err.name);
     }
   },
   // panel resizing: pointer capture keeps move/up on the handle itself,
@@ -206,10 +240,34 @@ effect(() => arm.on(serverArmed()));
 effect(() => {
   const want = arm.on();
   if (want === untracked(serverArmed)) return;
-  post(want ? 'arm' : 'disarm').then((ok) => {
+  command(want ? 'arm' : 'disarm').then((ok) => {
     if (!ok) arm.on(untracked(serverArmed));
   });
 });
+
+// ---------- signal vs observable: the same clicks, two models ----------
+// An observable is events over time: it has no current value, and every
+// event is delivered. A signal is the value now: a write of the same value
+// is a no-op, so its effects run only on a real change. The plainpanel rule
+// (invariant 3): the stream stays at the edge and writes the store.
+const sv = {
+  events: signal(0), // events the observable delivered
+  value: signal(0), // the signal: the latest roll
+  runs: signal(0), // runs of the effect that reads sv.value
+};
+effect(() => {
+  sv.value();
+  untracked(() => sv.runs(sv.runs() + 1));
+});
+if (!views.noObservable()) {
+  /** @type {any} */ (document.getElementById('rollButton'))
+    .when('click')
+    .map(() => 1 + Math.floor(Math.random() * 3))
+    .subscribe((/** @type {number} */ roll) => batch(() => {
+      sv.events(sv.events() + 1);
+      sv.value(roll);
+    }));
+}
 
 let drag = null; // transient gesture state, not app state — nothing renders from it
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -232,7 +290,7 @@ effect(() => rootStyle.setProperty('--bottom-h', layout.bottomH() + 'px'));
 effect(() => {
   document.documentElement.dataset.theme = ui.theme();
 });
-effect(() => stage.setBackground(ui.theme() === 'light' ? '#e9edf2' : '#0d1017'));
+effect(() => stage.setBackground(ui.theme() === 'light' ? '#eeeeee' : '#111111')); // = --panel in demo.css
 effect(() => {
   const off = ui.noCss(); // "no CSS": the same HTML, zero styling
   for (const el of document.querySelectorAll('link[rel=stylesheet], style')) {
@@ -241,7 +299,7 @@ effect(() => {
 });
 
 // ---------- entry point 1: bind the hand-written HTML ----------
-bind(document.body, { params, views, actions, snap, lastError, g, ui, arm });
+bind(document.body, { params, views, actions, snap, lastError, g, ui, arm, sv });
 
 // ---------- entry point 2: the same store through the panel builder ----------
 const builder = /** @type {Element} */ (document.getElementById('builder'));
@@ -265,31 +323,10 @@ mirror.select('select', g.select, [{ value: 'one', label: '1️⃣ one' }, { val
 mirror.readout('last ping', g.pinged);
 
 const experiment = p.folder('experiment (server-owned)');
-experiment.toggle('⚡ armed', arm.on);
+experiment.toggle('⚡ armed', arm.on, { disabled: views.armLocked });
 experiment.button('⏹ stop', actions.stop, { disabled: views.stopLocked });
 experiment.readout('status', views.statusLabel);
 experiment.readout('metric', views.metricLabel);
-
-// ---------- schema-driven form: the server defines it, the panel renders it ----------
-try {
-  const schema = await (await fetch('/api/params')).json();
-  const form = /** @type {Record<string, ReturnType<typeof signal>>} */ ({});
-  const sp = panel('run parameters — schema from the server', { parent: /** @type {Element} */ (document.getElementById('schemaPanel')) });
-  for (const param of schema) {
-    const sig = (form[param.name] = signal(param.default));
-    if (param.type === 'float') sp.slider(param.name, sig, { min: param.min, max: param.max, step: param.step });
-    else if (param.type === 'choice') sp.select(param.name, sig, param.options);
-    else if (param.type === 'bool') sp.toggle(param.name, sig);
-    else sp.text(param.name, sig);
-  }
-  sp.button(
-    '▶ start run',
-    () => post('start', Object.fromEntries(Object.entries(form).map(([k, s]) => [k, s()]))),
-    { disabled: views.startLocked },
-  );
-} catch {
-  lastError('no server — run parameters unavailable (npm run server)');
-}
 
 // ---------- canvas sparkline: one effect, same pattern as the 3D stage ----------
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('metricChart'));
@@ -320,3 +357,26 @@ effect(() => {
   });
   ctx.stroke();
 });
+
+// ---------- schema-driven form: the server defines it, the panel renders it ----------
+try {
+  const schema = await (await fetch('/api/params')).json();
+  const form = /** @type {Record<string, ReturnType<typeof signal>>} */ ({});
+  const sp = panel('run parameters — schema from the server', { parent: /** @type {Element} */ (document.getElementById('schemaPanel')) });
+  for (const param of schema) {
+    const sig = (form[param.name] = signal(param.default));
+    // the server reads these only at start: lock them while a run is going
+    const locked = { disabled: views.running };
+    if (param.type === 'float') sp.slider(param.name, sig, { min: param.min, max: param.max, step: param.step, ...locked });
+    else if (param.type === 'choice') sp.select(param.name, sig, param.options, locked);
+    else if (param.type === 'bool') sp.toggle(param.name, sig, locked);
+    else sp.text(param.name, sig, locked);
+  }
+  sp.button(
+    '▶ start run',
+    () => command('start', Object.fromEntries(Object.entries(form).map(([k, s]) => [k, s()]))),
+    { disabled: views.startLocked },
+  );
+} catch {
+  lastError('no server — run parameters unavailable (npm run server)');
+}

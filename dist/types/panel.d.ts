@@ -8,7 +8,7 @@
  *
  *   const p = panel('Training');
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });
- *   p.button(views.trainLabel, actions.train, { disabled: views.trainLocked });
+ *   p.button('▶ train', actions.train, { disabled: views.trainLocked });
  */
 import { type Readable, type Signal } from './signals';
 export interface PanelOptions {
@@ -17,7 +17,12 @@ export interface PanelOptions {
     /** Start expanded. Default: true. */
     open?: boolean;
 }
-export interface SliderOptions {
+/** Every control accepts these. */
+export interface ControlOptions {
+    /** Disables the control while truthy. State disables controls; it never hides them. */
+    disabled?: Readable<unknown>;
+}
+export interface SliderOptions extends ControlOptions {
     min: number;
     max: number;
     step: number;
@@ -40,16 +45,14 @@ export declare class Panel {
     private outer;
     constructor(title: string, open: boolean);
     slider(label: string, sig: Signal<number>, opts: SliderOptions): this;
-    number(label: string, sig: Signal<number>, opts?: Partial<Pick<SliderOptions, 'min' | 'max' | 'step'>>): this;
-    text(label: string, sig: Signal<string>): this;
+    number(label: string, sig: Signal<number>, opts?: Partial<Pick<SliderOptions, 'min' | 'max' | 'step'>> & ControlOptions): this;
+    text(label: string, sig: Signal<string>, opts?: ControlOptions): this;
     /** Native color picker bound to a '#rrggbb' string signal. */
-    color(label: string, sig: Signal<string>): this;
-    toggle(label: string, sig: Signal<boolean>): this;
-    select(label: string, sig: Signal<string | number>, options: SelectOption[]): this;
+    color(label: string, sig: Signal<string>, opts?: ControlOptions): this;
+    toggle(label: string, sig: Signal<boolean>, opts?: ControlOptions): this;
+    select(label: string, sig: Signal<string | number>, options: SelectOption[], opts?: ControlOptions): this;
     /** Consecutive buttons flow onto one line — native inline layout. */
-    button(label: string | Readable<string>, onClick: (e: Event) => void, opts?: {
-        disabled?: Readable<unknown>;
-    }): this;
+    button(label: string | Readable<string>, onClick: (e: Event) => void, opts?: ControlOptions): this;
     /** Read-only value display: label + <output>. */
     readout(label: string, source: Readable<unknown>, format?: (v: unknown) => string): this;
     /** Escape hatch: put any element (a canvas, a video tile) into the panel. */
@@ -60,4 +63,5 @@ export declare class Panel {
     dispose(): void;
     private row;
     private field;
+    private gate;
 }

@@ -4,7 +4,9 @@ A small signals library for dashboard control panels.
 Plain HTML, one store, no build step. ~800 lines of source.
 
 **Live demo - https://zaffer.github.io/plainpanel/examples/demo/**.
-Run `npm run server` on your machine, and go http://localhost:8780/examples/demo/ for full version.
+GitHub Pages has no server behind it, so the experiment panels stay offline
+there. For the full version, run `npm run server` and open
+http://localhost:8780/examples/demo/.
 
 ## The idea
 
@@ -13,7 +15,7 @@ Run `npm run server` on your machine, and go http://localhost:8780/examples/demo
   <output data-text="views.label"></output><br>
   <input type="range" min="0" max="100" data-bind="state.volume">
 </label>
-<button data-on="click:actions.reset">reset</button>
+<button data-on="click:actions.reset">↺ reset</button>
 
 <script type="module">
   import { signal, computed, bind } from './dist/plainpanel.js';
@@ -36,14 +38,16 @@ No build step. Copy `dist/plainpanel.js` into your project, or:
 
 ```html
 <script type="module">
-  import { signal, bind } from 'https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@main/dist/plainpanel.js';
+  import { signal, bind } from 'https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@v0.5.4/dist/plainpanel.js';
 </script>
 ```
+
+Pin a release tag (`@vX.Y.Z`); `@master` tracks the latest commit.
 
 Optional theme (dark, monospace, translucence):
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@main/plainpanel.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Zaffer/plainpanel@v0.5.4/plainpanel.css">
 ```
 
 ## Signals
@@ -78,7 +82,7 @@ It returns a `Stop` that removes all bindings.
 | Attribute | On | Does |
 |---|---|---|
 | `data-text="path"` | any element | `textContent` ← value |
-| `data-bind="path"` | input/select/textarea/details | two-way ⇄ **signal**. The signal's current value sets the type (number/boolean/string); NaN is never written. Checkbox → boolean; radio group → one signal, checked by value; `select[multiple]` → string[]; `type=file` → one-way DOM→signal (File[]); `<details>` → open ⇄ boolean; `<progress>`/`<meter>` → one-way value ← readable (computeds welcome) |
+| `data-bind="path"` | input/select/textarea/details | two-way ⇄ **signal**. A number signal reads back as a number (NaN is never written); anything else as a string. Checkbox → boolean; radio group → one signal, checked by value; `select[multiple]` → string[]; `type=file` → one-way DOM→signal (File[]); `<details>` → open ⇄ boolean; `<progress>`/`<meter>` → one-way value ← readable (computeds welcome) |
 | `data-show="path"` | any element | native `hidden` ← `!value` |
 | `data-class="path"` | any element | dynamic classes ← value (string or string[]), ADDED to the element's authored classes. Status classes (`ok`/`bad`) come and go; layout classes stay. The class attribute is owned by the binding |
 | `data-disabled="path"` | button/input/… | `disabled` ← value. State disables controls; it never hides or moves them |
@@ -97,17 +101,19 @@ computed, the binder reads it (reactively) and continues into its value.
 the latest server state, and `$item.size` stays live when a row's item is
 updated in place.
 
-**Browser rule — sliders and fieldsets.** Chrome cancels a slider drag when
-the child list of the slider's `<fieldset>` changes. This is native browser
-behavior; every framework triggers it. `data-each` changes structure only
-when the array length changes. Still: put `data-each` templates in their own
-container, never next to the controls that drive them.
+**Browser rule — sliders and fieldsets.** Chrome silently cancels a slider
+drag when the child list of a `<fieldset>` that contains the slider (directly
+or through nested fieldsets) changes. This is native browser behavior; every
+framework triggers it. Children added inside a `<div>` or `<details>` are
+safe. `data-each` changes structure only when membership or order changes.
+Still: put `data-each` templates and async-mounted panels in their own
+container, never directly in a fieldset with sliders.
 
 ## panel(title, opts?)
 
 Build panels from code, for quick experiments. The output is the same native
 elements you write by hand, in a `<details>` appended to
-`opts.parent ?? document.body`.
+`opts.parent ?? document.body` (`opts.open`, default true, starts it expanded).
 
 ```js
 const p = panel('settings');
@@ -115,7 +121,7 @@ p.slider('speed', state.speed, { min: 0, max: 5, step: 0.1, format: v => v.toFix
 p.number('count', state.count, { min: 0, max: 100, step: 1 });
 p.toggle('show grid', state.grid);
 p.select('mode', state.mode, ['auto', 'manual', { value: 'off', label: 'disabled' }]);
-p.button(views.runLabel, actions.run, { disabled: views.running }); // label may be a computed
+p.button('▶ run', actions.run, { disabled: views.running }); // label may also be a computed
 p.readout('status', views.statusLabel);
 p.text('name', state.name);
 p.color('trace color', state.color);
@@ -124,7 +130,11 @@ const f = p.folder('advanced');        // nested collapsible group
 p.dispose();                           // stops all bindings, removes the panel
 ```
 
-Sliders get a live `<output>` readout and wheel support by default.
+Sliders get a live `<output>` readout and wheel support by default. Every
+control takes an optional `{ disabled: readable }` as its last option
+(merged into the options object for `slider` and `number`), so builder
+panels follow the same gating as `data-disabled`:
+`p.toggle('⚡ armed', state.armed, { disabled: views.armLocked })`.
 
 ## Edge helpers
 
@@ -141,8 +151,10 @@ sock.connected();   // computed<boolean>
 sock.send({ cmd: 'arm' });
 ```
 
-Native browser Observables fit the same way, just feed the store:
-`button.when('click').subscribe(() => status('armed'))`.
+Native browser Observables (Chromium) fit the same way. They are streams
+at the edge, so they write the store:
+`button.when('click').subscribe(() => status('armed'))`. The demo's
+"signal vs observable" panel shows the difference side by side.
 
 ## Imperative escape hatch (three.js, canvas)
 
@@ -160,9 +172,12 @@ effect(() => stage.setPose(snapshot().pose));   // data in, never proxied
 
 ## Low-level primitives
 
-`bindText` `bindShow` `bindDisabled` `bindValue` `bindWheel` `listen` — each
-one creates one effect or one listener and returns a `Stop`. The binder and
-the panel builder are built from these. Build custom widgets from them too.
+`bindText` `bindShow` `bindClass` `bindDisabled` `bindInert` `bindGauge`
+`bindValue` `bindWheel` `listen` — each one creates one effect or one
+listener (`bindValue`: one of each) and returns a `Stop`. The binder and the
+panel builder are built from these. Build custom widgets from them too.
+`resolveValue(scope, path)` / `resolveTarget(scope, path)` are the binder's
+path walk: the current value, or the raw leaf (a signal, a handler).
 
 ## Development
 
@@ -181,4 +196,7 @@ npm run serve      # static-only server (no API) → open :8137/examples/demo/
 
 [`examples/demo/`](examples/demo/) is one dashboard with no build step. It
 shows three ownership domains on one page: a server-owned experiment, a
-client-owned control gallery, and imperative escape hatches.
+client-owned control gallery, and imperative escape hatches (three.js, a
+canvas sparkline). Experiment commands show as pending ("arming…") until a
+snapshot confirms them, and a bottom-bar panel compares a signal with a
+native Observable. The UI rules it follows are in [DESIGN.md](DESIGN.md).

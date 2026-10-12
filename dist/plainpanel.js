@@ -887,6 +887,7 @@ var Panel = class _Panel {
       bindValue(input, sig)
     );
     if (opts.wheel ?? true) this.stops.push(bindWheel(input, sig));
+    this.gate(input, opts);
     return this;
   }
   number(label, sig, opts = {}) {
@@ -895,29 +896,30 @@ var Panel = class _Panel {
     if (opts.min !== void 0) input.min = String(opts.min);
     if (opts.max !== void 0) input.max = String(opts.max);
     if (opts.step !== void 0) input.step = String(opts.step);
-    return this.field(label, input, sig);
+    return this.field(label, input, sig, opts);
   }
-  text(label, sig) {
+  text(label, sig, opts = {}) {
     const input = document.createElement("input");
     input.type = "text";
-    return this.field(label, input, sig);
+    return this.field(label, input, sig, opts);
   }
   /** Native color picker bound to a '#rrggbb' string signal. */
-  color(label, sig) {
+  color(label, sig, opts = {}) {
     const input = document.createElement("input");
     input.type = "color";
-    return this.field(label, input, sig);
+    return this.field(label, input, sig, opts);
   }
-  toggle(label, sig) {
+  toggle(label, sig, opts = {}) {
     const { row, labelEl } = this.row("");
     const input = document.createElement("input");
     input.type = "checkbox";
     labelEl.append(input, ` ${label}`);
     this.body.appendChild(row);
     this.stops.push(bindValue(input, sig));
+    this.gate(input, opts);
     return this;
   }
-  select(label, sig, options) {
+  select(label, sig, options, opts = {}) {
     const select = document.createElement("select");
     for (const opt of options) {
       const o = document.createElement("option");
@@ -930,7 +932,7 @@ var Panel = class _Panel {
       }
       select.appendChild(o);
     }
-    return this.field(label, select, sig);
+    return this.field(label, select, sig, opts);
   }
   /** Consecutive buttons flow onto one line — native inline layout. */
   button(label, onClick, opts = {}) {
@@ -938,7 +940,7 @@ var Panel = class _Panel {
     if (typeof label === "string") button.textContent = label;
     else this.stops.push(bindText(button, label));
     this.stops.push(listen(button, "click", onClick));
-    if (opts.disabled) this.stops.push(bindDisabled(button, opts.disabled));
+    this.gate(button, opts);
     this.body.appendChild(button);
     return this;
   }
@@ -982,12 +984,16 @@ var Panel = class _Panel {
     row.appendChild(labelEl);
     return { row, labelEl };
   }
-  field(label, input, sig) {
+  field(label, input, sig, opts) {
     const { row, labelEl } = this.row(label);
     labelEl.append(" ", input);
     this.body.appendChild(row);
     this.stops.push(bindValue(input, sig));
+    this.gate(input, opts);
     return this;
+  }
+  gate(el, opts) {
+    if (opts.disabled) this.stops.push(bindDisabled(el, opts.disabled));
   }
 };
 

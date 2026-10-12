@@ -39,6 +39,6 @@ export {
   listen,
 } from './bindings';
 
-export { panel, Panel, type PanelOptions, type SliderOptions, type SelectOption } from './panel';
+export { panel, Panel, type PanelOptions, type ControlOptions, type SliderOptions, type SelectOption } from './panel';
 
 export { series, connect, type Series, type Socket, type SocketOptions } from './edge';

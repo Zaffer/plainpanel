@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>plainpanel demo</title>
-  <!-- Structure only: the panel grid. Every control is browser-default. -->
+  <!-- Layout, plus the colours and corners that mark panel edges (DESIGN.md rule 11). Every control is browser-default. -->
   <link rel="stylesheet" href="./demo.css">
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js" } }
@@ -13,9 +13,11 @@
 
 <body>
 
-  <!-- ═══ TOP BAR: the experiment. Server-owned state: data-text/data-disabled
-       project the snapshot; buttons send commands; the next snapshot updates
-       the screen. Nothing here writes local state. ═══ -->
+  <!-- ═══ TOP BAR: the experiment, plus the page's own chrome (menu, 3D switch).
+       The experiment is server-owned: data-text/data-disabled project the
+       snapshot, the armed switch and the stop button send commands, and the
+       next snapshot updates the screen. While a command is in flight, status
+       says so ("arming…") and the experiment controls lock. ═══ -->
   <header id="top">
     <nav>
       <button popovertarget="menuPop" title="menu">☰ menu</button>
@@ -85,15 +87,18 @@
       <div><label>color <input type="color" data-bind="params.color"></label></div>
     </fieldset>
 
-    <!-- data-inert: the native inert attribute locks this whole subtree while running -->
-    <fieldset data-inert="views.running">
+    <!-- data-inert: the native inert attribute locks this whole subtree while running.
+         The path reads through a signal: snap is one signal holding the server
+         snapshot, and snap.running reads it, then walks into the value. -->
+    <fieldset data-inert="snap.running">
       <legend>inert while running</legend>
       <small>start the experiment: everything here stops taking focus or clicks</small>
       <div><label>a knob <input type="range" min="0" max="10" step="1" data-bind="g.inertDemo"></label></div>
     </fieldset>
 
     <!-- <details name="gallery">: native accordion — opening one closes the others.
-         The first one's open state is data-bind'ed into the store (watch the JSON). -->
+         The first one's open state is data-bind'ed into the store (watch it in the
+         JSON on the main panel's store page). -->
     <fieldset>
       <legend>gallery</legend>
       <details name="gallery" data-bind="ui.textOpen">
@@ -171,6 +176,7 @@
         <div><button data-on="click:actions.ping">🔔 plain &lt;button&gt;</button>
           <input type="button" value="🔔 input type=button" data-on="click:actions.ping">
         </div>
+        <div>last ping: <output data-text="g.pinged"></output></div>
         <form data-on="submit:actions.formSubmit">
           <div><label>in a real form <input type="text" data-bind="g.formText"></label></div>
           <div>
@@ -206,9 +212,9 @@
   <section id="main">
     <fieldset>
       <legend>page
-        <label><input type="radio" name="page" value="scene" data-bind="ui.page"> scene</label>
-        <label><input type="radio" name="page" value="store" data-bind="ui.page"> store</label>
-        <label><input type="radio" name="page" value="stats" data-bind="ui.page"> stats</label>
+        <label><input type="radio" name="page" value="scene" data-bind="ui.page"> 🎥 scene</label>
+        <label><input type="radio" name="page" value="store" data-bind="ui.page"> 🗃️ store</label>
+        <label><input type="radio" name="page" value="stats" data-bind="ui.page"> 📊 stats</label>
       </legend>
       <div id="pageScene" data-show="views.pageScene">
         <canvas id="scene">3D scene (three.js): the object controls drive it</canvas>
@@ -234,11 +240,11 @@
        fieldset that holds sliders would cancel an in-progress drag (Chrome) -->
   <section id="right">
     <fieldset id="builder">
-      <legend>
-        builder
-      </legend>
+      <legend>builder</legend>
     </fieldset>
-    <fieldset id="schemaPanel"></fieldset>
+    <fieldset id="schemaPanel">
+      <legend>server schema</legend>
+    </fieldset>
   </section>
 
   <div class="rz" id="rzBottom" data-rz="bottom" role="separator" aria-orientation="horizontal"
@@ -256,8 +262,8 @@
 
     <fieldset>
       <legend>customizable &lt;select&gt;</legend>
-      <small>&lt;selectedcontent&gt; needs appearance: base-select (CSS) — without it this is a plain select, bound to
-        the same shape signal</small>
+      <small>&lt;selectedcontent&gt; only shows with appearance: base-select, which is CSS this demo doesn't
+        ship. So this is a plain select, bound to the same shape signal</small>
       <div>
         <select data-bind="params.shape">
           <button>
@@ -272,15 +278,29 @@
 
     <fieldset>
       <legend>anchored popover</legend>
-      <small>without CSS anchor positioning the popover opens centred, not pinned to its button</small>
+      <small>the invoker becomes the popover's implicit anchor, but pinning it there takes CSS (position-area),
+        which this demo doesn't ship. So it opens centred</small>
       <div><button popovertarget="anchoredPop">📌 open anchored popover</button></div>
-      <div popover id="anchoredPop">anchored above the invoker, light-dismiss included</div>
+      <div popover id="anchoredPop">implicitly anchored to its button; light-dismiss included</div>
     </fieldset>
 
     <fieldset>
       <legend>showPicker()</legend>
       <small>programmatically opens the gallery's date picker</small>
-      <div><button data-on="click:actions.openDatePicker">📅 open date picker</button></div>
+      <div><button data-on="click:actions.openDatePicker">📅 open date picker</button>
+        <output data-text="ui.picker"></output></div>
+    </fieldset>
+
+    <!-- The same clicks, two models. The observable (button.when, Chromium) is
+         a stream at the edge; it writes the sv.value signal, the store. -->
+    <fieldset>
+      <legend>signal vs observable</legend>
+      <small>observable: events over time, every one delivered. signal: the value now, so a repeat roll
+        changes nothing and its effect skips it</small>
+      <div><button id="rollButton" data-disabled="views.noObservable">🎲 roll 1–3</button></div>
+      <div>🌊 observable, events delivered: <output data-text="sv.events"></output></div>
+      <div>📍 signal, value now: <output data-text="sv.value"></output></div>
+      <div>⚙ effect runs (one at start): <output data-text="sv.runs"></output></div>
     </fieldset>
   </footer>
 

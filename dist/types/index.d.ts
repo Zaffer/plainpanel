@@ -12,5 +12,5 @@
 export { signal, computed, effect, effectScope, batch, untracked, trigger, isSignal, isComputed, type Signal, type Computed, type Readable, type Stop, } from './signals';
 export { bind, resolveValue, resolveTarget, type Scope } from './binder';
 export { bindText, bindShow, bindClass, bindDisabled, bindInert, bindGauge, bindValue, bindWheel, listen, } from './bindings';
-export { panel, Panel, type PanelOptions, type SliderOptions, type SelectOption } from './panel';
+export { panel, Panel, type PanelOptions, type ControlOptions, type SliderOptions, type SelectOption } from './panel';
 export { series, connect, type Series, type Socket, type SocketOptions } from './edge';

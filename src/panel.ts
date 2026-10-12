@@ -8,7 +8,7 @@
  *
  *   const p = panel('Training');
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });
- *   p.button(views.trainLabel, actions.train, { disabled: views.trainLocked });
+ *   p.button('▶ train', actions.train, { disabled: views.trainLocked });
  */
 import { type Readable, type Signal, type Stop } from './signals';
 import { bindDisabled, bindText, bindValue, bindWheel, listen } from './bindings';
@@ -20,7 +20,13 @@ export interface PanelOptions {
   open?: boolean;
 }
 
-export interface SliderOptions {
+/** Every control accepts these. */
+export interface ControlOptions {
+  /** Disables the control while truthy. State disables controls; it never hides them. */
+  disabled?: Readable<unknown>;
+}
+
+export interface SliderOptions extends ControlOptions {
   min: number;
   max: number;
   step: number;
@@ -75,42 +81,48 @@ export class Panel {
       bindValue(input, sig),
     );
     if (opts.wheel ?? true) this.stops.push(bindWheel(input, sig));
+    this.gate(input, opts);
     return this;
   }
 
-  number(label: string, sig: Signal<number>, opts: Partial<Pick<SliderOptions, 'min' | 'max' | 'step'>> = {}): this {
+  number(
+    label: string,
+    sig: Signal<number>,
+    opts: Partial<Pick<SliderOptions, 'min' | 'max' | 'step'>> & ControlOptions = {},
+  ): this {
     const input = document.createElement('input');
     input.type = 'number';
     if (opts.min !== undefined) input.min = String(opts.min);
     if (opts.max !== undefined) input.max = String(opts.max);
     if (opts.step !== undefined) input.step = String(opts.step);
-    return this.field(label, input, sig);
+    return this.field(label, input, sig, opts);
   }
 
-  text(label: string, sig: Signal<string>): this {
+  text(label: string, sig: Signal<string>, opts: ControlOptions = {}): this {
     const input = document.createElement('input');
     input.type = 'text';
-    return this.field(label, input, sig);
+    return this.field(label, input, sig, opts);
   }
 
   /** Native color picker bound to a '#rrggbb' string signal. */
-  color(label: string, sig: Signal<string>): this {
+  color(label: string, sig: Signal<string>, opts: ControlOptions = {}): this {
     const input = document.createElement('input');
     input.type = 'color';
-    return this.field(label, input, sig);
+    return this.field(label, input, sig, opts);
   }
 
-  toggle(label: string, sig: Signal<boolean>): this {
+  toggle(label: string, sig: Signal<boolean>, opts: ControlOptions = {}): this {
     const { row, labelEl } = this.row('');
     const input = document.createElement('input');
     input.type = 'checkbox';
     labelEl.append(input, ` ${label}`);
     this.body.appendChild(row);
     this.stops.push(bindValue(input, sig));
+    this.gate(input, opts);
     return this;
   }
 
-  select(label: string, sig: Signal<string | number>, options: SelectOption[]): this {
+  select(label: string, sig: Signal<string | number>, options: SelectOption[], opts: ControlOptions = {}): this {
     const select = document.createElement('select');
     for (const opt of options) {
       const o = document.createElement('option');
@@ -123,16 +135,16 @@ export class Panel {
       }
       select.appendChild(o);
     }
-    return this.field(label, select, sig);
+    return this.field(label, select, sig, opts);
   }
 
   /** Consecutive buttons flow onto one line — native inline layout. */
-  button(label: string | Readable<string>, onClick: (e: Event) => void, opts: { disabled?: Readable<unknown> } = {}): this {
+  button(label: string | Readable<string>, onClick: (e: Event) => void, opts: ControlOptions = {}): this {
     const button = document.createElement('button');
     if (typeof label === 'string') button.textContent = label;
     else this.stops.push(bindText(button, label));
     this.stops.push(listen(button, 'click', onClick));
-    if (opts.disabled) this.stops.push(bindDisabled(button, opts.disabled));
+    this.gate(button, opts);
     this.body.appendChild(button);
     return this;
   }
@@ -182,11 +194,16 @@ export class Panel {
     return { row, labelEl };
   }
 
-  private field(label: string, input: HTMLInputElement | HTMLSelectElement, sig: Signal<any>): this {
+  private field(label: string, input: HTMLInputElement | HTMLSelectElement, sig: Signal<any>, opts: ControlOptions): this {
     const { row, labelEl } = this.row(label);
     labelEl.append(' ', input);
     this.body.appendChild(row);
     this.stops.push(bindValue(input, sig));
+    this.gate(input, opts);
     return this;
+  }
+
+  private gate(el: HTMLInputElement | HTMLSelectElement | HTMLButtonElement, opts: ControlOptions): void {
+    if (opts.disabled) this.stops.push(bindDisabled(el, opts.disabled));
   }
 }
