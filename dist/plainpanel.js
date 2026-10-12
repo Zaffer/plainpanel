@@ -858,6 +858,8 @@ var Panel = class _Panel {
   body;
   stops = [];
   folders = [];
+  /** What dispose() removes: el, or a folder's wrapping fieldset. */
+  outer;
   constructor(title, open) {
     this.el = document.createElement("details");
     this.el.className = "pp-panel";
@@ -867,6 +869,7 @@ var Panel = class _Panel {
     this.body = document.createElement("div");
     this.body.className = "pp-body";
     this.el.append(summary, this.body);
+    this.outer = this.el;
   }
   slider(label, sig, opts) {
     const { row, labelEl } = this.row(label);
@@ -953,11 +956,15 @@ var Panel = class _Panel {
     this.body.appendChild(el);
     return this;
   }
-  /** Nested collapsible group. Disposed with its parent. */
+  /** Nested collapsible group: fieldset.pp-folder > details. Disposed with its parent. */
   folder(title, open = true) {
     const child = new _Panel(title, open);
-    child.el.classList.replace("pp-panel", "pp-folder");
-    this.body.appendChild(child.el);
+    child.el.classList.remove("pp-panel");
+    const box = document.createElement("fieldset");
+    box.className = "pp-folder";
+    box.appendChild(child.el);
+    child.outer = box;
+    this.body.appendChild(box);
     this.folders.push(child);
     return child;
   }
@@ -965,7 +972,7 @@ var Panel = class _Panel {
   dispose() {
     for (const folder of this.folders.splice(0)) folder.dispose();
     for (const stop of this.stops.splice(0)) stop();
-    this.el.remove();
+    this.outer.remove();
   }
   row(label) {
     const row = document.createElement("div");

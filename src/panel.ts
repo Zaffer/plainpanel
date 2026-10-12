@@ -2,8 +2,9 @@
  * Programmatic panel builder — the second entry point, for quick experiment
  * panels. Generates the same native elements you would write by hand
  * (details/summary, label, output, input) bound with the same primitives the
- * attribute binder uses. No CSS required; the optional plainpanel.css theme
- * targets .pp-panel for the polytopy look.
+ * attribute binder uses. No CSS required: each folder is a fieldset around
+ * its details, so the native border shows the nesting. The optional
+ * plainpanel.css theme targets .pp-panel / .pp-folder for the polytopy look.
  *
  *   const p = panel('Training');
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });
@@ -42,6 +43,8 @@ export class Panel {
   private readonly body: HTMLDivElement;
   private readonly stops: Stop[] = [];
   private readonly folders: Panel[] = [];
+  /** What dispose() removes: el, or a folder's wrapping fieldset. */
+  private outer: Element;
 
   constructor(title: string, open: boolean) {
     this.el = document.createElement('details');
@@ -52,6 +55,7 @@ export class Panel {
     this.body = document.createElement('div');
     this.body.className = 'pp-body';
     this.el.append(summary, this.body);
+    this.outer = this.el;
   }
 
   slider(label: string, sig: Signal<number>, opts: SliderOptions): this {
@@ -149,11 +153,15 @@ export class Panel {
     return this;
   }
 
-  /** Nested collapsible group. Disposed with its parent. */
+  /** Nested collapsible group: fieldset.pp-folder > details. Disposed with its parent. */
   folder(title: string, open = true): Panel {
     const child = new Panel(title, open);
-    child.el.classList.replace('pp-panel', 'pp-folder');
-    this.body.appendChild(child.el);
+    child.el.classList.remove('pp-panel');
+    const box = document.createElement('fieldset');
+    box.className = 'pp-folder';
+    box.appendChild(child.el);
+    child.outer = box;
+    this.body.appendChild(box);
     this.folders.push(child);
     return child;
   }
@@ -162,7 +170,7 @@ export class Panel {
   dispose(): void {
     for (const folder of this.folders.splice(0)) folder.dispose();
     for (const stop of this.stops.splice(0)) stop();
-    this.el.remove();
+    this.outer.remove();
   }
 
   private row(label: string): { row: HTMLDivElement; labelEl: HTMLLabelElement } {

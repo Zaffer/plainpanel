@@ -2,8 +2,9 @@
  * Programmatic panel builder — the second entry point, for quick experiment
  * panels. Generates the same native elements you would write by hand
  * (details/summary, label, output, input) bound with the same primitives the
- * attribute binder uses. No CSS required; the optional plainpanel.css theme
- * targets .pp-panel for the polytopy look.
+ * attribute binder uses. No CSS required: each folder is a fieldset around
+ * its details, so the native border shows the nesting. The optional
+ * plainpanel.css theme targets .pp-panel / .pp-folder for the polytopy look.
  *
  *   const p = panel('Training');
  *   p.slider('Learning rate', params.learningRate, { min: 0.001, max: 0.1, step: 0.001 });
@@ -35,6 +36,8 @@ export declare class Panel {
     private readonly body;
     private readonly stops;
     private readonly folders;
+    /** What dispose() removes: el, or a folder's wrapping fieldset. */
+    private outer;
     constructor(title: string, open: boolean);
     slider(label: string, sig: Signal<number>, opts: SliderOptions): this;
     number(label: string, sig: Signal<number>, opts?: Partial<Pick<SliderOptions, 'min' | 'max' | 'step'>>): this;
@@ -51,7 +54,7 @@ export declare class Panel {
     readout(label: string, source: Readable<unknown>, format?: (v: unknown) => string): this;
     /** Escape hatch: put any element (a canvas, a video tile) into the panel. */
     add(el: Element): this;
-    /** Nested collapsible group. Disposed with its parent. */
+    /** Nested collapsible group: fieldset.pp-folder > details. Disposed with its parent. */
     folder(title: string, open?: boolean): Panel;
     /** Stops every binding and listener, recursively, and removes the element. */
     dispose(): void;

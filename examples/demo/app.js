@@ -10,7 +10,7 @@
 // Types come from the server's pydantic models: npm run types (regenerates
 // api.d.ts from the running server's OpenAPI).
 /** @typedef {import('./api').components['schemas']['Snapshot']} Snapshot */
-import { signal, computed, effect, bind, panel, connect, series } from '../../dist/plainpanel.js';
+import { signal, computed, effect, untracked, bind, panel, connect, series } from '../../dist/plainpanel.js';
 import { createStage } from './stage.js';
 
 // ---------- SERVER state: one signal, written only by the socket ----------
@@ -72,7 +72,9 @@ const g = {
 const ui = {
   textOpen: signal(true), // a <details> open state, in the store
   theme: signal('dark'),
+  scene: signal(true), // three.js render loop on/off
   noCss: signal(false), // disables every author stylesheet — raw HTML remains
+  page: signal('scene'), // main panel page: a radio group in its legend
 };
 // panel geometry — effects project these into CSS variables below
 const layout = { leftW: signal(320), rightW: signal(280), bottomH: signal(200) };
@@ -93,7 +95,6 @@ const views = {
     return snap().armed ? 'armed' : 'idle';
   }),
   running: computed(() => snap().running),
-  armLabel: computed(() => (snap().armed ? 'disarm' : 'arm')),
   armLocked: computed(() => !sock.connected() || snap().running || (!snap().armed && !snap().ready)),
   startLocked: computed(() => !sock.connected() || !snap().armed || snap().running),
   stopLocked: computed(() => !sock.connected() || !snap().running),
@@ -101,6 +102,10 @@ const views = {
   metricValue: computed(() => snap().metric),
   metricLabel: computed(() => snap().metric.toFixed(4) + ' @ ' + snap().seq),
   progress: computed(() => 1 - snap().metric),
+  // main panel pages: data-show takes a path, not page === 'x', so one computed each
+  pageScene: computed(() => ui.page() === 'scene'),
+  pageStore: computed(() => ui.page() === 'store'),
+  pageStats: computed(() => ui.page() === 'stats'),
   // gallery + stage
   stats: computed(() => {
     const s = stats();
@@ -119,10 +124,10 @@ const views = {
       }),
     );
     snapshot.textPanelOpen = ui.textOpen();
+    snapshot.page = ui.page();
     return JSON.stringify(snapshot, null, 1);
   }),
   features: computed(() => FEATURES.map((f) => ({ label: f.label, value: f.ok ? '✓' : '✗' }))),
-  themeLabel: computed(() => (ui.theme() === 'dark' ? '☾ dark mode' : '☀ light mode')),
 };
 
 // feature detection for the bottom bar (static — computed for uniformity)
@@ -148,12 +153,13 @@ async function post(path, body) {
     });
     const res = await r.json();
     lastError(res.ok ? '' : res.error);
+    return !!res.ok;
   } catch (err) {
     lastError(String(err));
+    return false;
   }
 }
 const actions = {
-  arm: () => post(snap().armed ? 'disarm' : 'arm'),
   stop: () => post('stop'),
   ping() {
     g.pinged(new Date().toLocaleTimeString());
@@ -169,7 +175,6 @@ const actions = {
       g.pinged('showPicker refused: ' + err.name);
     }
   },
-  toggleTheme: () => ui.theme(ui.theme() === 'dark' ? 'light' : 'dark'),
   // panel resizing: pointer capture keeps move/up on the handle itself,
   // so three listeners per handle cover the whole gesture. One write per move.
   rzDown(e) {
@@ -191,6 +196,21 @@ const actions = {
     drag = null;
   },
 };
+// ---------- arm state: a checkbox switch, not a toggling button (DESIGN.md rule 2) ----------
+// The checkbox writes arm.on; when it differs from the server, the effect
+// sends the matching command. The server's answer arrives as a snapshot and
+// re-syncs the checkbox; a refused command snaps it back at once.
+const serverArmed = computed(() => snap().armed); // changes only on a real flip
+const arm = { on: signal(false) };
+effect(() => arm.on(serverArmed()));
+effect(() => {
+  const want = arm.on();
+  if (want === untracked(serverArmed)) return;
+  post(want ? 'arm' : 'disarm').then((ok) => {
+    if (!ok) arm.on(untracked(serverArmed));
+  });
+});
+
 let drag = null; // transient gesture state, not app state — nothing renders from it
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
@@ -201,6 +221,7 @@ effect(() => stage.setScale(params.scale()));
 effect(() => stage.setSpin(params.spinX(), params.spinY()));
 effect(() => stage.setWireframe(params.wireframe()));
 effect(() => stage.setColor(params.color()));
+effect(() => stage.setRunning(ui.scene()));
 stage.onStats((s) => stats(s)); // ~5 Hz snapshots out of the render loop → one signal write
 
 // ---------- layout & chrome: the same pattern — effects push store values out ----------
@@ -220,32 +241,32 @@ effect(() => {
 });
 
 // ---------- entry point 1: bind the hand-written HTML ----------
-bind(document.body, { params, views, actions, snap, lastError, g, ui });
+bind(document.body, { params, views, actions, snap, lastError, g, ui, arm });
 
 // ---------- entry point 2: the same store through the panel builder ----------
-const right = /** @type {Element} */ (document.getElementById('right'));
-const p = panel('controls (panel builder)', { parent: right });
+const builder = /** @type {Element} */ (document.getElementById('builder'));
+const p = panel('controls (panel builder)', { parent: builder });
 
 const object = p.folder('object');
-object.select('shape', params.shape, [{ value: 'knot', label: 'torus knot' }, 'box', 'sphere']);
+object.select('shape', params.shape, [{ value: 'knot', label: '🥨 torus knot' }, { value: 'box', label: '📦 box' }, { value: 'sphere', label: '🔵 sphere' }]);
 object.slider('scale', params.scale, { min: 0.2, max: 3, step: 0.01, format: (v) => v.toFixed(2) });
 object.slider('spin x', params.spinX, { min: -3, max: 3, step: 0.1, format: (v) => v.toFixed(1) });
 object.slider('spin y', params.spinY, { min: -3, max: 3, step: 0.1, format: (v) => v.toFixed(1) });
-object.toggle('wireframe', params.wireframe);
+object.toggle('🕸 wireframe', params.wireframe);
 object.color('color', params.color);
 
 const mirror = p.folder('gallery mirror (two-way proof)', false);
 mirror.text('text', g.text);
 mirror.number('number', g.number, { min: 0, max: 100, step: 1 });
 mirror.slider('range', g.range, { min: 0, max: 1, step: 0.01 });
-mirror.toggle('checkbox', g.checkbox);
-mirror.select('radio group', g.radio, ['alpha', 'beta', 'gamma']);
-mirror.select('select', g.select, ['one', 'two', 'three']);
+mirror.toggle('☑ checkbox', g.checkbox);
+mirror.select('radio group', g.radio, [{ value: 'alpha', label: 'α alpha' }, { value: 'beta', label: 'β beta' }, { value: 'gamma', label: 'γ gamma' }]);
+mirror.select('select', g.select, [{ value: 'one', label: '1️⃣ one' }, { value: 'two', label: '2️⃣ two' }, { value: 'three', label: '3️⃣ three' }]);
 mirror.readout('last ping', g.pinged);
 
 const experiment = p.folder('experiment (server-owned)');
-experiment.button(views.armLabel, actions.arm, { disabled: views.armLocked });
-experiment.button('stop', actions.stop, { disabled: views.stopLocked });
+experiment.toggle('⚡ armed', arm.on);
+experiment.button('⏹ stop', actions.stop, { disabled: views.stopLocked });
 experiment.readout('status', views.statusLabel);
 experiment.readout('metric', views.metricLabel);
 
@@ -253,7 +274,7 @@ experiment.readout('metric', views.metricLabel);
 try {
   const schema = await (await fetch('/api/params')).json();
   const form = /** @type {Record<string, ReturnType<typeof signal>>} */ ({});
-  const sp = panel('run parameters — schema from the server', { parent: right });
+  const sp = panel('run parameters — schema from the server', { parent: /** @type {Element} */ (document.getElementById('schemaPanel')) });
   for (const param of schema) {
     const sig = (form[param.name] = signal(param.default));
     if (param.type === 'float') sp.slider(param.name, sig, { min: param.min, max: param.max, step: param.step });
@@ -262,7 +283,7 @@ try {
     else sp.text(param.name, sig);
   }
   sp.button(
-    'start run',
+    '▶ start run',
     () => post('start', Object.fromEntries(Object.entries(form).map(([k, s]) => [k, s()]))),
     { disabled: views.startLocked },
   );
